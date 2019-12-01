@@ -1,0 +1,5 @@
+/ignore/
+/.venv/
+
+__pycache__/
+*.swp

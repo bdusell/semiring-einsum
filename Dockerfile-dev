@@ -1,0 +1,22 @@
+FROM nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04
+RUN apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        software-properties-common && \
+    add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get update -y && \
+    DEBIAND_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        python3.7 \
+        python3.7-dev \
+        python3.7-distutils \
+        python3.7-venv \
+        curl && \
+    rm -rf /var/lib/apt/lists/* && \
+    curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py && \
+    apt-get purge -y curl && \
+    python3.7 /tmp/get-pip.py && \
+    rm /tmp/get-pip.py && \
+    pip install poetry
+# UTF-8 encoding is necessary for printing non-ASCII characters to the
+# terminal.
+ENV LC_ALL C.UTF-8
+WORKDIR /app/
