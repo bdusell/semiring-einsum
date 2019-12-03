@@ -110,6 +110,7 @@ def logspace_einsum_backward(
         include_indexes=False)
     # C : same size as output of equation
     C = grad / Z
+    del Z
     arg_grads = []
     output_to_input_ranges = [
         x.get_ranges(equation, args)

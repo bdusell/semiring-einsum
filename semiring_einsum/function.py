@@ -4,7 +4,7 @@ import torch
 
 def combine(
         forward: typing.Callable,
-        backward: typing.Callable) -> torch.autograd.Function:
+        backward: typing.Callable) -> typing.Callable:
     r"""Combine an einsum implementation and its derivative into an
     auto-differentiable :py:class:`~torch.autograd.Function`.
 
@@ -17,7 +17,7 @@ def combine(
         :py:class:`tuple` of :py:class:`~torch.Tensor` containing the gradients
         with respect to ``args``. The :math:`i`\ th gradient may be ``None`` if
         ``needs_grad[i]`` is ``False``.
-    :return: A new auto-differentiable function.
+    :return: The ``apply`` method of a new auto-differentiable function.
     """
 
     class EinsumFunction(torch.autograd.Function):
