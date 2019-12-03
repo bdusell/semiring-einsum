@@ -13,6 +13,7 @@ torch = "^1.3"
 sphinx = "^2.2"
 sphinxcontrib-bibtex = "^1.0"
 sphinx-autodoc-typehints = "^1.10"
+numpy = "^1.17"
 
 [build-system]
 requires = ["poetry>=0.12"]
