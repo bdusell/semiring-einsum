@@ -29,7 +29,7 @@ __all__ = [
     'compile_equation',
     'real_einsum_forward',
     'real_einsum_backward',
-    'real_einsum',
+    'einsum',
     'logspace_einsum_forward',
     'logspace_einsum_backward',
     'logspace_einsum',
