@@ -145,6 +145,84 @@ def create_reduce_info(parsed_equation, input_var_lists, reduced_vars,
         lookup_info.append(LookupInfo(index_map, num_extra_vars, permutation))
     return ReduceInfo(reduced_vars, lookup_info)
 
+class EquationForBackward(EquationForForward):
+
+    def __init__(self, forward_equation, reduce_output_to_input,
+            reduce_others_to_input, other_reduced_variables):
+        super().__init__(
+            forward_equation,
+            forward_equation.reduce_input_to_output)
+        self.reduce_output_to_input = reduce_output_to_input
+        self.reduce_others_to_input = reduce_others_to_input
+        self.other_reduced_variables = other_reduced_variables
+
+def compile_equation_for_backward(equation):
+    if not isinstance(equation, EquationForForward):
+        raise TypeError
+    reduce_output_to_input = []
+    reduce_others_to_input = []
+    other_reduced_variables = []
+    output_vars_set = set(equation.output_variables)
+    for i, input_vars in enumerate(equation.input_variables):
+        input_vars_set = set(input_vars)
+        vars_in_output_but_not_input = get_variables_not_in(
+            equation.output_variables,
+            input_vars_set)
+        reduce_output_to_input.append(create_reduce_info(
+            equation,
+            [equation.output_variables],
+            vars_in_output_but_not_input,
+            input_vars))
+        other_input_vars = [
+            input_vars_j
+            for j, input_vars_j in enumerate(equation.input_variables)
+            if j != i
+        ]
+        vars_not_in_output_or_input = get_variables_not_in(
+            equation.all_variables(),
+            input_vars_set | output_vars_set)
+        reduced_vars = (
+            vars_in_output_but_not_input +
+            vars_not_in_output_or_input)
+        reduce_others_to_input.append(create_reduce_info(
+            equation,
+            other_input_vars,
+            reduced_vars,
+            input_vars))
+        other_reduced_variables.append(vars_not_in_output_or_input)
+    return EquationForBackward(
+        equation,
+        reduce_output_to_input,
+        reduce_others_to_input,
+        other_reduced_variables)
+
+def compile_equation(
+        equation: str,
+        forward: bool=True,
+        backward: bool=True) -> ParsedEquation:
+    r"""Pre-compile an einsum equation for use with the einsum functions in
+    this package.
+
+    :param equation: An equation in einsum syntax.
+    :param forward: Compile the equation for use with
+        :py:func:`real_einsum_forward`,
+        :py:func:`logspace_einsum_forward`,
+        or any function implemented with
+        :py:func:`semiring_einsum_forward`.
+    :param logspace_backward: Compile the equation for use with
+        :py:func:`real_einsum_backward`,
+        :py:func:`logspace_einsum_backward`,
+        or anything else that requires computing the derivative of an einsum.
+        If a backward pass is not needed, consider setting this to ``False``.
+    :return: A pre-compiled equation.
+    """
+    equation = parse_equation(equation)
+    if forward or backward:
+        equation = compile_equation_for_forward(equation)
+    if backward:
+        equation = compile_equation_for_backward(equation)
+    return equation
+
 def semiring_einsum_forward(
         equation: ParsedEquation,
         args: typing.Sequence[torch.Tensor],

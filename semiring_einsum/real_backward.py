@@ -4,17 +4,17 @@ import typing
 import torch
 
 from .extend import (
-    semiring_einsum_forward_impl,
-    EquationForBackward,
-    reduce_in_place)
+    adjust_size,
+    reduce_in_place,
+    EquationForBackward)
 
-def logspace_einsum_backward(
+def real_einsum_backward(
         equation: EquationForBackward,
         args: typing.Sequence[torch.Tensor],
         needs_grad: typing.Sequence[bool],
         grad: torch.Tensor) -> typing.List[typing.Optional[torch.Tensor]]:
     r"""Compute the derivative of
-    :py:func:`~semiring_einsum.logspace_einsum_forward`.
+    :py:func:`~semiring_einsum.real_einsum_forward`.
 
     Like the forward pass, the backward pass is done in memory-efficient
     fashion by doing summations in-place.
@@ -26,8 +26,8 @@ def logspace_einsum_backward(
         is being computed.
     :param needs_grad: Indicates which inputs in ``args`` require gradient.
     :param grad: The gradient of the loss function with respect to the output
-        of the logspace einsum operation.
-    :return: The gradients with respect to each of the inputs to the logspace
+        of the einsum operation.
+    :return: The gradients with respect to each of the inputs to the
         einsum operation. Returns ``None`` for inputs that do not require
         gradient.
     """
@@ -43,21 +43,6 @@ def logspace_einsum_backward(
         raise ValueError(
             'size of gradient {} does not match expected size {}'.format(
                 grad_size, output_size))
-    input_to_output_ranges = equation.reduce_input_to_output.get_ranges(
-        equation, args)
-    # Z : same size as output of equation
-    Z = semiring_einsum_forward_impl(
-        args,
-        initialize_sum=_init_addexp,
-        add_in_place=_addexp_in_place,
-        multiply_in_place=_add_in_place,
-        variable_ranges=input_to_output_ranges,
-        output_size=output_size,
-        lookup_info=equation.reduce_input_to_output.lookup_info,
-        include_indexes=False)
-    # C : same size as output of equation
-    C = grad / Z
-    del Z
     arg_grads = []
     output_to_input_ranges = [
         x.get_ranges(equation, args)
@@ -77,37 +62,31 @@ def logspace_einsum_backward(
     ]
     for i, arg in enumerate(args):
         if needs_grad[i]:
+            arg_size = tuple(equation.get_sizes(args, equation.input_variables[i]))
 
             def generate_terms():
                 for var_values in itertools.product(*output_to_input_ranges[i]):
                     lookup_info = equation.reduce_output_to_input[i].lookup_info[0]
-                    C_slice = lookup_info.lookup(C, var_values)
+                    grad_slice = lookup_info.lookup(grad, var_values)
 
                     def generate_inner_terms():
                         for other_var_values in itertools.product(*other_to_input_ranges[i]):
                             reduced_var_values = var_values + other_var_values
 
                             def generate_factors():
-                                # No need to reshape the current input -- it
-                                # already matches the shape of its gradient!
-                                # NOTE: Important! The first tensor yielded
-                                # *must* be a copy, or else the in-place
-                                # operations will modify the original input,
-                                # leading to incorrect results.
-                                yield arg.clone()
                                 lookup_info_list = equation.reduce_others_to_input[i].lookup_info
                                 for other_arg, lookup_info in zip(other_args[i], lookup_info_list):
                                     yield lookup_info.lookup(other_arg, reduced_var_values)
 
                             yield reduce_in_place(
-                                _add_in_place,
-                                generate_factors())
+                                _multiply_in_place,
+                                generate_factors(),
+                                lambda x: adjust_size(x, arg_size))
 
                     term = reduce_in_place(
-                        _addexp_in_place,
-                        generate_inner_terms(),
-                        _init_addexp)
-                    term.mul_(C_slice)
+                        _add_in_place,
+                        generate_inner_terms())
+                    term.mul_(grad_slice)
                     yield term
 
             arg_grad = reduce_in_place(
@@ -118,13 +97,8 @@ def logspace_einsum_backward(
         arg_grads.append(arg_grad)
     return arg_grads
 
-def _init_addexp(a):
-    a.exp_()
-    return a
-
-def _addexp_in_place(a, b):
-    b.exp_()
-    a.add_(b)
-
 def _add_in_place(a, b):
     a.add_(b)
+
+def _multiply_in_place(a, b):
+    a.mul_(b)

@@ -7,6 +7,7 @@ import torch
 from semiring_einsum import (
     compile_equation,
     real_einsum_forward,
+    real_einsum_backward,
     logspace_einsum_forward,
     logspace_einsum_backward,
     logspace_einsum,
@@ -20,8 +21,8 @@ OUTPUT_SIZE = (A, C, D)
 class TestCompileEquation(unittest.TestCase):
 
     def test_compile_equation(self):
+        compile_equation(EQUATION_STR, backward=False)
         compile_equation(EQUATION_STR)
-        compile_equation(EQUATION_STR, logspace_backward=True)
 
 class TestSemiringEinsum(unittest.TestCase):
 
@@ -37,10 +38,31 @@ class TestSemiringEinsum(unittest.TestCase):
         expected_result = torch.einsum(EQUATION_STR, *args)
         self.assertEqual(expected_result.size(), OUTPUT_SIZE)
         result = real_einsum_forward(
-            compile_equation(EQUATION_STR),
+            compile_equation(EQUATION_STR, backward=False),
             *args)
         self.assertEqual(result.size(), OUTPUT_SIZE)
         numpy.testing.assert_allclose(result, expected_result, rtol=1e-6)
+
+    def test_real_einsum_backward(self):
+        args = [
+            torch.nn.Parameter(torch.rand(
+                size, device=self.device, generator=self.generator))
+            for size in SIZES
+        ]
+        grad = torch.empty(OUTPUT_SIZE, device=self.device)
+        grad.uniform_(-5.0, 5.0, generator=self.generator)
+        expected_output = torch.einsum(EQUATION_STR, *args)
+        expected_output.backward(grad)
+        expected_grads = [arg.grad.clone() for arg in args]
+        arg_grads = real_einsum_backward(
+            compile_equation(EQUATION_STR, forward=False),
+            [arg.detach() for arg in args],
+            [True for arg in args],
+            grad)
+        for arg_grad, arg_size in zip(arg_grads, SIZES):
+            self.assertEqual(arg_grad.size(), arg_size)
+        for arg_grad, expected_grad in zip(arg_grads, expected_grads):
+            numpy.testing.assert_allclose(arg_grad, expected_grad, rtol=1e-5)
 
     def test_logspace_einsum_forward(self):
         args = [
@@ -54,7 +76,7 @@ class TestSemiringEinsum(unittest.TestCase):
         expected_result = torch.log(exp_result)
         self.assertEqual(expected_result.size(), OUTPUT_SIZE)
         result = logspace_einsum_forward(
-            compile_equation(EQUATION_STR),
+            compile_equation(EQUATION_STR, backward=False),
             *args)
         self.assertEqual(result.size(), OUTPUT_SIZE)
         numpy.testing.assert_allclose(result, expected_result)
@@ -74,7 +96,7 @@ class TestSemiringEinsum(unittest.TestCase):
         expected_output.backward(grad)
         expected_grads = [arg.grad.clone() for arg in args]
         arg_grads = logspace_einsum_backward(
-            compile_equation(EQUATION_STR, logspace_backward=True),
+            compile_equation(EQUATION_STR, forward=False),
             [arg.detach() for arg in args],
             [True for arg in args],
             grad)
@@ -96,7 +118,7 @@ class TestSemiringEinsum(unittest.TestCase):
         for arg in args:
             arg.grad.zero_()
         log_output = logspace_einsum(
-            compile_equation(EQUATION_STR, logspace_backward=True),
+            compile_equation(EQUATION_STR),
             *[torch.log(arg) for arg in args])
         output = torch.exp(log_output)
         loss = output.sum()
@@ -117,7 +139,7 @@ class TestSemiringEinsum(unittest.TestCase):
         self.assertEqual(expected_maxval.size(), OUTPUT_SIZE)
         self.assertEqual(expected_argmax.size(), (*OUTPUT_SIZE, 3))
         maxval, argmax = logspace_viterbi_einsum_forward(
-            compile_equation(EQUATION_STR),
+            compile_equation(EQUATION_STR, backward=False),
             *args)
         self.assertEqual(expected_maxval.size(), OUTPUT_SIZE)
         self.assertEqual(expected_argmax.size(), (*OUTPUT_SIZE, 3))
