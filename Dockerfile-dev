@@ -4,7 +4,7 @@ RUN apt-get update -y && \
         software-properties-common && \
     add-apt-repository -y ppa:deadsnakes/ppa && \
     apt-get update -y && \
-    DEBIAND_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         python3.7 \
         python3.7-dev \
         python3.7-distutils \
