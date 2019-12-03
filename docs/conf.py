@@ -58,5 +58,6 @@ html_static_path = ['_static']
 # See https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html
 intersphinx_mapping = {
     'python' : ('https://docs.python.org/3', None),
+    'numpy' : ('https://docs.scipy.org/doc/numpy', None),
     'pytorch' : ('https://pytorch.org/docs/stable', None)
 }

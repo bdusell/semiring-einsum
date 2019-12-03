@@ -16,6 +16,37 @@ function.
    :maxdepth: 2
    :caption: Contents:
 
+   api
+
+Installation
+------------
+
+.. code-block:: sh
+
+   pip install git+git://github.com/bdusell/semiring-einsum.git
+
+Basic Usage
+-----------
+
+.. code-block:: python
+
+   import semiring_einsum
+
+   EQUATION = semiring_einsum.compile_equation('ik,kj->ij')
+
+   A = torch.log(torch.rand(3, 5))
+   B = torch.log(torch.rand(5, 7))
+   C = semiring_einsum.logspace_einsum(EQUATION, A, B)
+
+Note that unlike in NumPy or PyTorch, equations are pre-compiled using
+:py:func:`~semiring_einsum.compile_equation` rather than re-parsed from
+scratch every time einsum is called.
+
+API Documentation
+-----------------
+
+See :doc:`api`.
+
 What is Einsum?
 ---------------
 
@@ -23,7 +54,7 @@ The so-called "einsum" function, offered in tensor math libraries such as
 `NumPy <https://docs.scipy.org/doc/numpy/reference/generated/numpy.einsum.html>`_,
 `TensorFlow <https://www.tensorflow.org/api_docs/python/tf/einsum>`_,
 and `PyTorch <https://pytorch.org/docs/stable/torch.html#torch.einsum>`_,
-is a function that can be used to express complicated multi-dimensional, linear
+is a function that can be used to express multi-dimensional, linear
 algebraic tensor operations with a simple, concise syntax inspired by
 `Einstein summation <https://en.wikipedia.org/wiki/Einstein_notation>`_.
 It is a very useful kernel that can be used to implement other tensor
@@ -65,41 +96,31 @@ instantiated with different semirings.
 For a formal definition of semirings and an introduction to semirings in the
 context of context-free grammar parsing, see :cite:`goodman1999`.
 
-Installation
-------------
-
-.. code-block:: sh
-
-   pip install git+git://github.com/bdusell/semiring-einsum.git
-
-Basic Usage
------------
-
-.. code-block:: python
-
-   import semiring_einsum
-
-   EQUATION = semiring_einsum.compile_equation('ik,kj->ij')
-
-   A = torch.rand(3, 5)
-   B = torch.rand(5, 7)
-   C = semiring_einsum.logspace_einsum(EQUATION, A, B)
-
-Note that unlike in NumPy or PyTorch, equations are pre-compiled using
-:py:func:`~semiring_einsum.compile_equation` rather than re-parsed from
-scratch every time einsum is called.
-
 Einsum Syntax
 -------------
 
 This package supports the same einsum equation syntax as
 :py:func:`torch.einsum`, except it does not support ellipses (``...``) syntax.
 
-API
----
+Space Complexity
+----------------
 
-.. automodule:: semiring_einsum
-   :members:
+Consider the einsum equation ``'ak,ak,ak->a'``, where :math:`A` is the size of
+the ``a`` dimension and :math:`K` is the size of the ``k`` dimension.
+Implementations of einsum in NumPy and PyTorch contract two tensors at time,
+which means that they must create an intermediate tensor of size
+:math:`A \times K`. There is even a routine in NumPy,
+:py:func:`numpy.einsum_path`, which figures out the best contraction order.
+However, it should, in principle, be possible to avoid this by summing over
+all tensors at the same time. This is exactly what ``semiring_einsum`` does,
+and as a result the amount of scratch space the forward pass of einsum requires
+remains fixed as a function of :math:`K`:
+
+.. image:: space-complexity.png
+
+It does, however, come at a cost in time:
+
+.. image:: time-complexity.png
 
 Indexes
 -------
