@@ -1,6 +1,8 @@
 Semiring Einsum
 ===============
 
+`View on GitHub <https://github.com/bdusell/semiring-einsum>`_
+
 This is a Python package for PyTorch that implements einsum for alternative
 semirings besides the usual "add-multiply" semiring, namely logspace and Viterbi.
 It can be extended to support additional semirings relatively easily.
