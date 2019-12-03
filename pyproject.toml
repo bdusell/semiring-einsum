@@ -1,9 +1,10 @@
 [tool.poetry]
-name = "semiring_einsum"
+name = "semiring-einsum"
 version = "0.1.0"
 description = "Generic implementation of einsum in PyTorch that supports different semirings"
 authors = ["Brian DuSell"]
 license = "MIT"
+repository = "https://github.com/bdusell/semiring-einsum"
 
 [tool.poetry.dependencies]
 python = "^3.7"
@@ -15,6 +16,8 @@ sphinxcontrib-bibtex = "^1.0"
 sphinx-autodoc-typehints = "^1.10"
 numpy = "^1.17"
 matplotlib = "^3.1"
+twine = "^3.1"
+wheel = "^0.33.6"
 
 [build-system]
 requires = ["poetry>=0.12"]
