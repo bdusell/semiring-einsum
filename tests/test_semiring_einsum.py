@@ -8,6 +8,7 @@ from semiring_einsum import (
     compile_equation,
     real_einsum_forward,
     real_einsum_backward,
+    einsum,
     logspace_einsum_forward,
     logspace_einsum_backward,
     logspace_einsum,
@@ -63,6 +64,27 @@ class TestSemiringEinsum(unittest.TestCase):
             self.assertEqual(arg_grad.size(), arg_size)
         for arg_grad, expected_grad in zip(arg_grads, expected_grads):
             numpy.testing.assert_allclose(arg_grad, expected_grad, rtol=1e-5)
+
+    def test_einsum(self):
+        args = [
+            torch.nn.Parameter(torch.rand(
+                size, device=self.device, generator=self.generator))
+            for size in SIZES
+        ]
+        expected_output = torch.einsum(EQUATION_STR, *args)
+        expected_loss = expected_output.sum()
+        expected_loss.backward()
+        expected_grads = [arg.grad.clone() for arg in args]
+        for arg in args:
+            arg.grad.zero_()
+        output = einsum(
+            compile_equation(EQUATION_STR),
+            *args)
+        loss = output.sum()
+        loss.backward()
+        grads = [arg.grad.clone() for arg in args]
+        for grad, expected_grad in zip(grads, expected_grads):
+            numpy.testing.assert_allclose(grad, expected_grad, rtol=1e-6)
 
     def test_logspace_einsum_forward(self):
         args = [
