@@ -33,6 +33,6 @@ def combine(
             args = ctx.saved_tensors
             needs_grad = ctx.needs_input_grad[1:]
             input_grads = backward(ctx.equation, args, needs_grad, grad)
-            return (None,) + tuple(input_grads)
+            return (None, *input_grads)
 
     return EinsumFunction.apply
