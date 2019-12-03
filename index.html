@@ -1,0 +1,229 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Semiring Einsum &#8212; Semiring Einsum  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API" href="api.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="semiring-einsum">
+<h1>Semiring Einsum<a class="headerlink" href="#semiring-einsum" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference external" href="https://github.com/bdusell/semiring-einsum">View on GitHub</a></p>
+<p>This is a Python package for PyTorch that implements einsum for alternative
+semirings besides the usual “add-multiply” semiring, namely logspace and Viterbi.
+It can be extended to support additional semirings relatively easily.</p>
+<p>The einsum implementation in this package was also specifically designed
+to be memory-efficient. Whereas a naive implementation of einsum could easily
+consume huge amounts of memory, this implementation uses no more memory than
+necessary by performing summations in-place, at the cost of some parallelism.
+In some cases, it uses even less memory than the built-in <a class="reference external" href="https://pytorch.org/docs/stable/torch.html#torch.einsum" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a>
+function.</p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+</div>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip install git+git://github.com/bdusell/semiring-einsum.git
+</pre></div>
+</div>
+</div>
+<div class="section" id="basic-usage">
+<h2>Basic Usage<a class="headerlink" href="#basic-usage" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">semiring_einsum</span>
+
+<span class="n">EQUATION</span> <span class="o">=</span> <span class="n">semiring_einsum</span><span class="o">.</span><span class="n">compile_equation</span><span class="p">(</span><span class="s1">&#39;ik,kj-&gt;ij&#39;</span><span class="p">)</span>
+
+<span class="n">A</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">B</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+<span class="n">C</span> <span class="o">=</span> <span class="n">semiring_einsum</span><span class="o">.</span><span class="n">logspace_einsum</span><span class="p">(</span><span class="n">EQUATION</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that unlike in NumPy or PyTorch, equations are pre-compiled using
+<a class="reference internal" href="api.html#semiring_einsum.compile_equation" title="semiring_einsum.compile_equation"><code class="xref py py-func docutils literal notranslate"><span class="pre">compile_equation()</span></code></a> rather than re-parsed from
+scratch every time einsum is called.</p>
+</div>
+<div class="section" id="api-documentation">
+<h2>API Documentation<a class="headerlink" href="#api-documentation" title="Permalink to this headline">¶</a></h2>
+<p>See <a class="reference internal" href="api.html"><span class="doc">API</span></a>.</p>
+</div>
+<div class="section" id="what-is-einsum">
+<h2>What is Einsum?<a class="headerlink" href="#what-is-einsum" title="Permalink to this headline">¶</a></h2>
+<p>The so-called “einsum” function, offered in tensor math libraries such as
+<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.einsum.html">NumPy</a>,
+<a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/einsum">TensorFlow</a>,
+and <a class="reference external" href="https://pytorch.org/docs/stable/torch.html#torch.einsum">PyTorch</a>,
+is a function that can be used to express multi-dimensional, linear
+algebraic tensor operations with a simple, concise syntax inspired by
+<a class="reference external" href="https://en.wikipedia.org/wiki/Einstein_notation">Einstein summation</a>.
+It is a very useful kernel that can be used to implement other tensor
+operations; for example, the matrix-matrix product of <code class="docutils literal notranslate"><span class="pre">A</span></code> and <code class="docutils literal notranslate"><span class="pre">B</span></code> can
+be implemented as</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span> <span class="o">=</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ik,kj-&gt;ij&#39;</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In this example, the first argument to the function is the “equation,” and the
+lower-case letters <code class="docutils literal notranslate"><span class="pre">i</span></code>, <code class="docutils literal notranslate"><span class="pre">j</span></code>, and <code class="docutils literal notranslate"><span class="pre">k</span></code> all serve as labels for dimensions
+of the tensors <code class="docutils literal notranslate"><span class="pre">A</span></code>, <code class="docutils literal notranslate"><span class="pre">B</span></code>, and <code class="docutils literal notranslate"><span class="pre">C</span></code>. The left side of the equation, <code class="docutils literal notranslate"><span class="pre">ik,kj</span></code>,
+describes the dimensions of the inputs, <code class="docutils literal notranslate"><span class="pre">A</span></code> and <code class="docutils literal notranslate"><span class="pre">B</span></code>; the right side of the
+equation, <code class="docutils literal notranslate"><span class="pre">ij</span></code>, describes the desired shape of the output tensor <code class="docutils literal notranslate"><span class="pre">C</span></code>. This
+means that for each <code class="docutils literal notranslate"><span class="pre">i</span></code> and <code class="docutils literal notranslate"><span class="pre">j</span></code>, entry <code class="docutils literal notranslate"><span class="pre">C[i,</span> <span class="pre">j]</span></code> will be formed by
+multiplying elements from <code class="docutils literal notranslate"><span class="pre">A[i,</span> <span class="pre">:]</span></code> and <code class="docutils literal notranslate"><span class="pre">B[:,</span> <span class="pre">j]</span></code>. Since the variable
+<code class="docutils literal notranslate"><span class="pre">k</span></code> does not appear in the output, it is “summed out,” meaning that each
+<code class="docutils literal notranslate"><span class="pre">C[i,</span> <span class="pre">j]</span></code> is the result of computing <code class="docutils literal notranslate"><span class="pre">A[i,</span> <span class="pre">k]</span> <span class="pre">*</span> <span class="pre">B[k,</span> <span class="pre">j]</span></code> for each
+<code class="docutils literal notranslate"><span class="pre">k</span></code>, then summing over the resulting terms.</p>
+<div class="math notranslate nohighlight">
+\[C_{ij} = \sum_k A_{ik} \times B_{kj}\]</div>
+<p>Einsum can also be used with three or more tensor arguments.</p>
+</div>
+<div class="section" id="semirings">
+<h2>Semirings<a class="headerlink" href="#semirings" title="Permalink to this headline">¶</a></h2>
+<p>It is often useful to swap out addition and multiplication for different
+operators that have the same algebraic properties as addition and
+multiplication do on real numbers. We can express this using
+<a class="reference external" href="https://en.wikipedia.org/wiki/Semiring">semirings</a>. Changing the semiring
+used by a piece of code can result in new, useful algorithms. For example,
+the <a class="reference external" href="https://en.wikipedia.org/wiki/Viterbi_algorithm">Viterbi Algorithm</a>
+and the <a class="reference external" href="https://en.wikipedia.org/wiki/Forward_algorithm">Forward Algorithm</a>
+on Hidden Markov Models can be viewed as instances of the same algorithm
+instantiated with different semirings.</p>
+<p>For a formal definition of semirings and an introduction to semirings in the
+context of context-free grammar parsing, see <a class="bibtex reference internal" href="#goodman1999" id="id2">[Goo99]</a>.</p>
+</div>
+<div class="section" id="einsum-syntax">
+<h2>Einsum Syntax<a class="headerlink" href="#einsum-syntax" title="Permalink to this headline">¶</a></h2>
+<p>This package supports the same einsum equation syntax as
+<a class="reference external" href="https://pytorch.org/docs/stable/torch.html#torch.einsum" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a>, except it does not support ellipses (<code class="docutils literal notranslate"><span class="pre">...</span></code>) syntax.</p>
+</div>
+<div class="section" id="space-complexity">
+<h2>Space Complexity<a class="headerlink" href="#space-complexity" title="Permalink to this headline">¶</a></h2>
+<p>Consider the einsum equation <code class="docutils literal notranslate"><span class="pre">'ak,ak,ak-&gt;a'</span></code>, where <span class="math notranslate nohighlight">\(A\)</span> is the size of
+the <code class="docutils literal notranslate"><span class="pre">a</span></code> dimension and <span class="math notranslate nohighlight">\(K\)</span> is the size of the <code class="docutils literal notranslate"><span class="pre">k</span></code> dimension.
+Implementations of einsum in NumPy and PyTorch contract two tensors at time,
+which means that they must create an intermediate tensor of size
+<span class="math notranslate nohighlight">\(A \times K\)</span>. There is even a routine in NumPy,
+<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.einsum_path.html#numpy.einsum_path" title="(in NumPy v1.17)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.einsum_path()</span></code></a>, which figures out the best contraction order.
+However, it should, in principle, be possible to avoid this by summing over
+all tensors at the same time. This is exactly what <code class="docutils literal notranslate"><span class="pre">semiring_einsum</span></code> does,
+and as a result the amount of scratch space the forward pass of einsum requires
+remains fixed as a function of <span class="math notranslate nohighlight">\(K\)</span>:</p>
+<img alt="_images/space-complexity.png" src="_images/space-complexity.png" />
+<p>It does, however, come at a cost in time:</p>
+<img alt="_images/time-complexity.png" src="_images/time-complexity.png" />
+</div>
+<div class="section" id="indexes">
+<h2>Indexes<a class="headerlink" href="#indexes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div>
+<div class="section" id="bibliography">
+<h2>Bibliography<a class="headerlink" href="#bibliography" title="Permalink to this headline">¶</a></h2>
+<p id="bibtex-bibliography-index-0"><dl class="citation">
+<dt class="bibtex label" id="goodman1999"><span class="brackets"><a class="fn-backref" href="#id2">Goo99</a></span></dt>
+<dd><p>Joshua Goodman. Semiring parsing. <em>Computational Linguistics</em>, 25(4):573–605, 1999.</p>
+</dd>
+</dl>
+</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">Semiring Einsum</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="api.html" title="next chapter">API</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Brian DuSell.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

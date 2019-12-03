@@ -1,0 +1,397 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>API &#8212; Semiring Einsum  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Semiring Einsum" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-semiring_einsum">
+<span id="api"></span><h1>API<a class="headerlink" href="#module-semiring_einsum" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="semiring_einsum.compile_equation">
+<code class="sig-prename descclassname">semiring_einsum.</code><code class="sig-name descname">compile_equation</code><span class="sig-paren">(</span><em class="sig-param">equation</em>, <em class="sig-param">forward=True</em>, <em class="sig-param">backward=True</em><span class="sig-paren">)</span><a class="headerlink" href="#semiring_einsum.compile_equation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pre-compile an einsum equation for use with the einsum functions in
+this package.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>equation</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – An equation in einsum syntax.</p></li>
+<li><p><strong>forward</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>) – Compile the equation for use with
+<a class="reference internal" href="#semiring_einsum.real_einsum_forward" title="semiring_einsum.real_einsum_forward"><code class="xref py py-func docutils literal notranslate"><span class="pre">real_einsum_forward()</span></code></a>,
+<a class="reference internal" href="#semiring_einsum.logspace_einsum_forward" title="semiring_einsum.logspace_einsum_forward"><code class="xref py py-func docutils literal notranslate"><span class="pre">logspace_einsum_forward()</span></code></a>,
+or any function implemented with
+<a class="reference internal" href="#semiring_einsum.semiring_einsum_forward" title="semiring_einsum.semiring_einsum_forward"><code class="xref py py-func docutils literal notranslate"><span class="pre">semiring_einsum_forward()</span></code></a>.</p></li>
+<li><p><strong>logspace_backward</strong> – Compile the equation for use with
+<a class="reference internal" href="#semiring_einsum.real_einsum_backward" title="semiring_einsum.real_einsum_backward"><code class="xref py py-func docutils literal notranslate"><span class="pre">real_einsum_backward()</span></code></a>,
+<a class="reference internal" href="#semiring_einsum.logspace_einsum_backward" title="semiring_einsum.logspace_einsum_backward"><code class="xref py py-func docutils literal notranslate"><span class="pre">logspace_einsum_backward()</span></code></a>,
+or anything else that requires computing the derivative of an einsum.
+If a backward pass is not needed, consider setting this to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ParsedEquation</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A pre-compiled equation.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="semiring_einsum.real_einsum_forward">
+<code class="sig-prename descclassname">semiring_einsum.</code><code class="sig-name descname">real_einsum_forward</code><span class="sig-paren">(</span><em class="sig-param">equation</em>, <em class="sig-param">*args</em><span class="sig-paren">)</span><a class="headerlink" href="#semiring_einsum.real_einsum_forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Einsum where addition and multiplication have their usual meanings.</p>
+<p>When dealing with summations over more than two input tensors at once,
+this can be even more memory efficient (if slower) than
+<a class="reference external" href="https://pytorch.org/docs/stable/torch.html#torch.einsum" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>equation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">EquationForForward</span></code>) – A pre-compiled equation.</p></li>
+<li><p><strong>args</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>) – Input tensors. The number of input tensors must be compatible
+with <code class="docutils literal notranslate"><span class="pre">equation</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Output of einsum.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="semiring_einsum.real_einsum_backward">
+<code class="sig-prename descclassname">semiring_einsum.</code><code class="sig-name descname">real_einsum_backward</code><span class="sig-paren">(</span><em class="sig-param">equation</em>, <em class="sig-param">args</em>, <em class="sig-param">needs_grad</em>, <em class="sig-param">grad</em><span class="sig-paren">)</span><a class="headerlink" href="#semiring_einsum.real_einsum_backward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the derivative of
+<a class="reference internal" href="#semiring_einsum.real_einsum_forward" title="semiring_einsum.real_einsum_forward"><code class="xref py py-func docutils literal notranslate"><span class="pre">real_einsum_forward()</span></code></a>.</p>
+<p>Like the forward pass, the backward pass is done in memory-efficient
+fashion by doing summations in-place.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>equation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">EquationForBackward</span></code>) – Pre-compiled einsum equation. The derivative of the
+logspace einsum operation specified by this equation will be computed.
+The equation must have been compiled with <code class="docutils literal notranslate"><span class="pre">backward=True</span></code>.</p></li>
+<li><p><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>]) – The inputs to the logspace einsum operation whose derivative
+is being computed.</p></li>
+<li><p><strong>needs_grad</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>]) – Indicates which inputs in <code class="docutils literal notranslate"><span class="pre">args</span></code> require gradient.</p></li>
+<li><p><strong>grad</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>) – The gradient of the loss function with respect to the output
+of the einsum operation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.8)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>]]</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The gradients with respect to each of the inputs to the
+einsum operation. Returns <code class="docutils literal notranslate"><span class="pre">None</span></code> for inputs that do not require
+gradient.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="semiring_einsum.einsum">
+<code class="sig-prename descclassname">semiring_einsum.</code><code class="sig-name descname">einsum</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#semiring_einsum.einsum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Differentiable version of real-space einsum.</p>
+<p>This combines <a class="reference internal" href="#semiring_einsum.real_einsum_forward" title="semiring_einsum.real_einsum_forward"><code class="xref py py-func docutils literal notranslate"><span class="pre">real_einsum_forward()</span></code></a> and
+<a class="reference internal" href="#semiring_einsum.real_einsum_backward" title="semiring_einsum.real_einsum_backward"><code class="xref py py-func docutils literal notranslate"><span class="pre">real_einsum_backward()</span></code></a> into one auto-differentiable
+<a class="reference external" href="https://pytorch.org/docs/stable/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Function</span></code></a>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="semiring_einsum.logspace_einsum_forward">
+<code class="sig-prename descclassname">semiring_einsum.</code><code class="sig-name descname">logspace_einsum_forward</code><span class="sig-paren">(</span><em class="sig-param">equation</em>, <em class="sig-param">*args</em><span class="sig-paren">)</span><a class="headerlink" href="#semiring_einsum.logspace_einsum_forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Einsum where addition <span class="math notranslate nohighlight">\(a + b\)</span> is replaced with
+<span class="math notranslate nohighlight">\(\log(\exp a + \exp b)\)</span>, and multiplication <span class="math notranslate nohighlight">\(a \times b\)</span> is
+replaced with addition <span class="math notranslate nohighlight">\(a + b\)</span>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>equation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">EquationForForward</span></code>) – A pre-compiled equation.</p></li>
+<li><p><strong>args</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>) – Input tensors. The number of input tensors must be compatible
+with <code class="docutils literal notranslate"><span class="pre">equation</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Output of einsum.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="semiring_einsum.logspace_einsum_backward">
+<code class="sig-prename descclassname">semiring_einsum.</code><code class="sig-name descname">logspace_einsum_backward</code><span class="sig-paren">(</span><em class="sig-param">equation</em>, <em class="sig-param">args</em>, <em class="sig-param">needs_grad</em>, <em class="sig-param">grad</em><span class="sig-paren">)</span><a class="headerlink" href="#semiring_einsum.logspace_einsum_backward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the derivative of
+<a class="reference internal" href="#semiring_einsum.logspace_einsum_forward" title="semiring_einsum.logspace_einsum_forward"><code class="xref py py-func docutils literal notranslate"><span class="pre">logspace_einsum_forward()</span></code></a>.</p>
+<p>Like the forward pass, the backward pass is done in memory-efficient
+fashion by doing summations in-place.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>equation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">EquationForBackward</span></code>) – Pre-compiled einsum equation. The derivative of the
+logspace einsum operation specified by this equation will be computed.
+The equation must have been compiled with <code class="docutils literal notranslate"><span class="pre">backward=True</span></code>.</p></li>
+<li><p><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>]) – The inputs to the logspace einsum operation whose derivative
+is being computed.</p></li>
+<li><p><strong>needs_grad</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>]) – Indicates which inputs in <code class="docutils literal notranslate"><span class="pre">args</span></code> require gradient.</p></li>
+<li><p><strong>grad</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>) – The gradient of the loss function with respect to the output
+of the logspace einsum operation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.8)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>]]</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The gradients with respect to each of the inputs to the logspace
+einsum operation. Returns <code class="docutils literal notranslate"><span class="pre">None</span></code> for inputs that do not require
+gradient.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="semiring_einsum.logspace_einsum">
+<code class="sig-prename descclassname">semiring_einsum.</code><code class="sig-name descname">logspace_einsum</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#semiring_einsum.logspace_einsum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Differentiable version of logspace einsum.</p>
+<p>This combines <a class="reference internal" href="#semiring_einsum.logspace_einsum_forward" title="semiring_einsum.logspace_einsum_forward"><code class="xref py py-func docutils literal notranslate"><span class="pre">logspace_einsum_forward()</span></code></a> and
+<a class="reference internal" href="#semiring_einsum.logspace_einsum_backward" title="semiring_einsum.logspace_einsum_backward"><code class="xref py py-func docutils literal notranslate"><span class="pre">logspace_einsum_backward()</span></code></a> into one auto-differentiable
+<a class="reference external" href="https://pytorch.org/docs/stable/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Function</span></code></a>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="semiring_einsum.logspace_viterbi_einsum_forward">
+<code class="sig-prename descclassname">semiring_einsum.</code><code class="sig-name descname">logspace_viterbi_einsum_forward</code><span class="sig-paren">(</span><em class="sig-param">equation</em>, <em class="sig-param">*args</em><span class="sig-paren">)</span><a class="headerlink" href="#semiring_einsum.logspace_viterbi_einsum_forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Einsum where addition <span class="math notranslate nohighlight">\(a + b\)</span> is replaced with
+<span class="math notranslate nohighlight">\((\max(a, b), \arg \max(a, b))\)</span>, and multiplication
+<span class="math notranslate nohighlight">\(a \times b\)</span> is replaced with addition <span class="math notranslate nohighlight">\(a + b\)</span>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>equation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">EquationForForward</span></code>) – A pre-compiled equation.</p></li>
+<li><p><strong>args</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>) – Input tensors. The number of input tensors must be compatible
+with <code class="docutils literal notranslate"><span class="pre">equation</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.8)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Tuple</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">LongTensor</span></code>]</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A tuple containing the max and argmax of the einsum operation.
+The first element of the tuple simply contains the maximum values
+of the terms “summed” over by einsum. The second element contains
+the values of the summed-out variables that maximized those terms.
+If the max tensor has dimension
+<span class="math notranslate nohighlight">\(N_1 \times \cdots \times N_m\)</span>,
+and <span class="math notranslate nohighlight">\(k\)</span> variables were summed out, then the argmax tensor has
+dimension
+<span class="math notranslate nohighlight">\(N_1 \times \cdots \times N_m \times k\)</span>,
+where the <span class="math notranslate nohighlight">\((m+1)\)</span>th dimension is a <span class="math notranslate nohighlight">\(k\)</span>-tuple of indexes
+representing the argmax. The variables in the <cite>k</cite>-tuple are ordered
+by first appearance in the einsum equation.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="semiring_einsum.semiring_einsum_forward">
+<code class="sig-prename descclassname">semiring_einsum.</code><code class="sig-name descname">semiring_einsum_forward</code><span class="sig-paren">(</span><em class="sig-param">equation</em>, <em class="sig-param">args</em>, <em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#semiring_einsum.semiring_einsum_forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implement a custom version of einsum using the callback <code class="docutils literal notranslate"><span class="pre">func</span></code>.</p>
+<p>This function is the main workhorse used to implement einsum for different
+semirings. It takes away the burden of figuring out how to index the input
+tensors and sum terms in a memory-efficient way, and only requires
+callbacks for performing addition and multiplication. It is also flexible
+enough to support multiple passes through the input tensors, which is
+required when the summation operation is logsumexp. This function is used
+internally by the real, logspace, and Viterbi semiring einsum
+implementations in this package and can be used to implement einsum in
+other semirings as well.</p>
+<p>Note that this function only implements the <em>forward</em> aspect of einsum and
+is not differentiable. To turn it into a differentiable PyTorch
+<a class="reference external" href="https://pytorch.org/docs/stable/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Function</span></code></a>, implement its derivative and use
+<a class="reference internal" href="#semiring_einsum.combine" title="semiring_einsum.combine"><code class="xref py py-func docutils literal notranslate"><span class="pre">combine()</span></code></a> to combine the forward and backward
+functions into one function.</p>
+<p>The signature of <code class="docutils literal notranslate"><span class="pre">func</span></code> is <code class="docutils literal notranslate"><span class="pre">func(compute_sum)</span></code>, where
+<code class="docutils literal notranslate"><span class="pre">compute_sum</span></code> is a function that, when called, runs einsum on the inputs
+with given addition and multiplication operators.
+<a class="reference internal" href="#semiring_einsum.semiring_einsum_forward" title="semiring_einsum.semiring_einsum_forward"><code class="xref py py-func docutils literal notranslate"><span class="pre">semiring_einsum_forward()</span></code></a> returns the return value of <code class="docutils literal notranslate"><span class="pre">func</span></code>.
+<code class="docutils literal notranslate"><span class="pre">func</span></code> will often consist of a single call to <code class="docutils literal notranslate"><span class="pre">compute_sum()</span></code>, but
+there are cases where multiple passes over the inputs with different
+semirings is useful (e.g. computing maximum values and then using them
+for a subsequent logsumexp step).</p>
+<p>Here is a quick example that implements the equivalent of
+<a class="reference external" href="https://pytorch.org/docs/stable/torch.html#torch.einsum" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">regular_einsum</span><span class="p">(</span><span class="n">equation</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">compute_sum</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">add_in_place</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+            <span class="n">a</span> <span class="o">+=</span> <span class="n">b</span>
+        <span class="k">def</span> <span class="nf">multiply_in_place</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+            <span class="n">a</span> <span class="o">*=</span> <span class="n">b</span>
+        <span class="k">return</span> <span class="n">compute_sum</span><span class="p">(</span><span class="n">add_in_place</span><span class="p">,</span> <span class="n">multiply_in_place</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">semiring_einsum_forward</span><span class="p">(</span><span class="n">equation</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">func</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The signature of <code class="docutils literal notranslate"><span class="pre">compute_sum</span></code> is
+<code class="docutils literal notranslate"><span class="pre">compute_sum(add_in_place,</span> <span class="pre">multiply_in_place,</span> <span class="pre">initialize_sum=None,</span>
+<span class="pre">include_indexes=False)</span></code>.
+The <code class="docutils literal notranslate"><span class="pre">+</span></code> and <code class="docutils literal notranslate"><span class="pre">*</span></code> operators are customized using <code class="docutils literal notranslate"><span class="pre">add_in_place</span></code> and
+<code class="docutils literal notranslate"><span class="pre">multiply_in_place</span></code>. <code class="docutils literal notranslate"><span class="pre">add_in_place(a,</span> <span class="pre">b)</span></code> should be a function that
+accepts two <a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>s and implements <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">+=</span> <span class="pre">b</span></code>, for
+the desired definition of <code class="docutils literal notranslate"><span class="pre">+</span></code>. Likewise, <code class="docutils literal notranslate"><span class="pre">multiply_in_place(a,</span> <span class="pre">b)</span></code>
+should implement <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">*=</span> <span class="pre">b</span></code> for the desired definition of <code class="docutils literal notranslate"><span class="pre">*</span></code>. These
+functions must modify the tensor object <code class="docutils literal notranslate"><span class="pre">a</span></code> <em>in-place</em> and not return a
+new tensor.</p>
+<p>The optional function <code class="docutils literal notranslate"><span class="pre">initialize_sum(a)</span></code> should be used to modify
+the first term of the einsum summation so that it becomes suitable as
+the accumulator <code class="docutils literal notranslate"><span class="pre">a</span></code> in subsequent calls to <code class="docutils literal notranslate"><span class="pre">add_in_place</span></code>.
+<code class="docutils literal notranslate"><span class="pre">initialize_sum()</span></code> must <em>return</em> its result. By default, the first
+term is left as-is.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">include_indexes</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, then the parameter <code class="docutils literal notranslate"><span class="pre">a</span></code> in
+<code class="docutils literal notranslate"><span class="pre">initialize_sum(a)</span></code> and the parameter <code class="docutils literal notranslate"><span class="pre">b</span></code> in
+<code class="docutils literal notranslate"><span class="pre">add_in_place(a,</span> <span class="pre">b)</span></code> will become a <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a> of the form
+<code class="docutils literal notranslate"><span class="pre">(term,</span> <span class="pre">var_values)</span></code>, where <code class="docutils literal notranslate"><span class="pre">term</span></code> is the usual tensor value, and
+<code class="docutils literal notranslate"><span class="pre">var_values</span></code> is a <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a> of <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> representing
+the current values of the variables being summed over in the einsum
+summation. This is necessary for implementing argmax for the Viterbi
+semiring.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>equation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">ParsedEquation</span></code>) – A pre-compiled equation.</p></li>
+<li><p><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>]) – A list of input tensors.</p></li>
+<li><p><strong>func</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.8)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code></a>) – A callback of the form described above.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="semiring_einsum.combine">
+<code class="sig-prename descclassname">semiring_einsum.</code><code class="sig-name descname">combine</code><span class="sig-paren">(</span><em class="sig-param">forward</em>, <em class="sig-param">backward</em><span class="sig-paren">)</span><a class="headerlink" href="#semiring_einsum.combine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Combine an einsum implementation and its derivative into an
+auto-differentiable <a class="reference external" href="https://pytorch.org/docs/stable/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Function</span></code></a>.</p>
+<p>Combining separate forward and backward implementations allows more
+memory efficiency than would otherwise be possible.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>forward</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.8)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code></a>) – The forward implementation.</p></li>
+<li><p><strong>backward</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.8)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code></a>) – The backward implementation. Its signature should be
+<code class="docutils literal notranslate"><span class="pre">backward(equation,</span> <span class="pre">args,</span> <span class="pre">needs_grad,</span> <span class="pre">grad)</span></code>, and it should return a
+<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a> of <a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a> containing the gradients
+with respect to <code class="docutils literal notranslate"><span class="pre">args</span></code>. The <span class="math notranslate nohighlight">\(i\)</span>th gradient may be <code class="docutils literal notranslate"><span class="pre">None</span></code> if
+<code class="docutils literal notranslate"><span class="pre">needs_grad[i]</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.8)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code></a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The <code class="docutils literal notranslate"><span class="pre">apply</span></code> method of a new auto-differentiable function.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Semiring Einsum</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Semiring Einsum</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Brian DuSell.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/api.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
