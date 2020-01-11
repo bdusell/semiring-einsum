@@ -100,7 +100,8 @@ class TestSemiringEinsum(unittest.TestCase):
         self.assertEqual(expected_result.size(), OUTPUT_SIZE)
         result = logspace_einsum_forward(
             compile_equation(EQUATION_STR, backward=False),
-            *args)
+            *args,
+            block_size=3)
         self.assertEqual(result.size(), OUTPUT_SIZE)
         numpy.testing.assert_allclose(result, expected_result)
 

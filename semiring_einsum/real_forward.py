@@ -5,7 +5,7 @@ from .extend import semiring_einsum_forward, EquationForForward
 def real_einsum_forward(
         equation: EquationForForward,
         *args: torch.Tensor,
-        block_size) -> torch.Tensor:
+        block_size : int) -> torch.Tensor:
     r"""Einsum where addition and multiplication have their usual meanings.
 
     When dealing with summations over more than two input tensors at once,
