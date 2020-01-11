@@ -11,12 +11,16 @@ RUN apt-get update -y && \
         python3.7-venv \
         curl && \
     rm -rf /var/lib/apt/lists/* && \
+    # See https://github.com/sdispater/poetry/issues/721
+    ln -s "$(which python3.7)" /usr/local/bin/python && \
     curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py && \
     apt-get purge -y curl && \
     python3.7 /tmp/get-pip.py && \
     rm /tmp/get-pip.py && \
-    pip install poetry
+    pip install poetry=='1.*'
 # UTF-8 encoding is necessary for printing non-ASCII characters to the
 # terminal.
 ENV LC_ALL C.UTF-8
+# Stores Python packages in the local directory.
+ENV POETRY_VIRTUALENVS_IN_PROJECT true
 WORKDIR /app/
