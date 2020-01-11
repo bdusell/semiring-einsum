@@ -79,15 +79,18 @@ def logspace_einsum_backward(
         if needs_grad[i]:
 
             def generate_terms():
+                # Sum over all variables in the output but not args[i].
                 for var_values in itertools.product(*output_to_input_ranges[i]):
                     lookup_info = equation.reduce_output_to_input[i].lookup_info[0]
                     C_slice = lookup_info.lookup(C, var_values)
 
                     def generate_inner_terms():
+                        # Sum over all leftover variables not in the output or args[i].
                         for other_var_values in itertools.product(*other_to_input_ranges[i]):
                             reduced_var_values = var_values + other_var_values
 
                             def generate_factors():
+                                # Take the product over all args[i].
                                 # No need to reshape the current input -- it
                                 # already matches the shape of its gradient!
                                 # NOTE: Important! The first tensor yielded

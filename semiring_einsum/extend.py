@@ -94,13 +94,36 @@ def get_variables_not_in(variables, excluded):
 
 class ReduceInfo:
 
-    def __init__(self, reduced_variables, lookup_info):
+    def __init__(self, reduced_variables, lookup_info, output_variables,
+            reduced_dims):
         self.reduced_variables = reduced_variables
         self.lookup_info = lookup_info
+        self.output_variables = output_variables
+        self.reduced_dims = reduced_dims
 
-    def get_ranges(self, parsed_equation, args):
+    def get_ranges(self, parsed_equation, args, block_size):
         sizes = parsed_equation.get_sizes(args, self.reduced_variables)
-        return [range(s) for s in sizes]
+        return [list(generate_slices(s, block_size)) for s in sizes]
+
+    def get_term_size(self, parsed_equation, args, var_values):
+        # Compute the size of each of the terms in an einsum. Each term is a
+        # slice over ranges of the summed variables.
+        # Note that var_values is a list of slices, not a list of ints.
+        return (
+            # The output dimensions come first, and their sizes match the
+            # inputs.
+            parsed_equation.get_sizes(args, self.output_variables) +
+            # The summed dimensions come last, and their sizes correspond to
+            # the sizes of the slices.
+            [s.stop - s.start for s in var_values]
+        )
+
+def generate_slices(total_size, block_size):
+    lo = 0
+    while lo < total_size:
+        hi = min(lo + block_size, total_size)
+        yield slice(lo, hi)
+        lo = hi
 
 _COLON = slice(None)
 
@@ -121,29 +144,36 @@ class LookupInfo:
 
 def create_reduce_info(parsed_equation, input_var_lists, reduced_vars,
         output_vars):
+    # The shape of the final, reshaped tensor will correspond to
+    # output_vars + reduced_vars.
     lookup_info = []
     reduced_vars_dict = { v : i for i, v in enumerate(reduced_vars) }
     for input_vars in input_var_lists:
         index_map = []
-        input_var_dict = {}
-        counter = 0
+        # Loop over all variables in this input tensor.
         for dest_index, input_var in enumerate(input_vars):
             source_index = reduced_vars_dict.get(input_var)
             if source_index is not None:
+                # The variable is a reduced variable.
+                # This maps an index of a list of reduced variable values
+                # (source_index) to an index of a tuple used to slice the
+                # input tensor (dest_index).
                 index_map.append((source_index, dest_index))
-            else:
-                input_var_dict[input_var] = counter
-                counter += 1
+        input_var_dict = { v : i for i, v in enumerate(input_vars) }
         num_extra_vars = 0
         permutation = []
-        for output_var in output_vars:
+        # Loop over all variables in the output.
+        for output_var in itertools.chain(output_vars, reduced_vars):
             perm_index = input_var_dict.get(output_var)
             if perm_index is None:
+                # The variable does not appear in the input after it has been
+                # indexed.
                 perm_index = len(input_var_dict) + num_extra_vars
                 num_extra_vars += 1
             permutation.append(perm_index)
         lookup_info.append(LookupInfo(index_map, num_extra_vars, permutation))
-    return ReduceInfo(reduced_vars, lookup_info)
+    reduced_dims = tuple(range(len(output_vars), len(output_vars) + len(reduced_vars)))
+    return ReduceInfo(reduced_vars, lookup_info, output_vars, reduced_dims)
 
 class EquationForBackward(EquationForForward):
 
@@ -225,6 +255,7 @@ def compile_equation(
 
 def semiring_einsum_forward(
         equation: ParsedEquation,
+        block_size: int,
         args: typing.Sequence[torch.Tensor],
         func: typing.Callable):
     r"""Implement a custom version of einsum using the callback ``func``.
@@ -301,38 +332,50 @@ def semiring_einsum_forward(
     if not isinstance(equation, EquationForForward):
         raise TypeError
     equation.validate_sizes(args)
-    var_ranges = equation.reduce_input_to_output.get_ranges(equation, args)
-    output_size = equation.get_sizes(args, equation.output_variables)
-    lookup_info = equation.reduce_input_to_output.lookup_info
 
-    def compute_sum(add_in_place, multiply_in_place, initialize_sum=None,
-            include_indexes=False):
-        return semiring_einsum_forward_impl(args, initialize_sum, add_in_place,
-            multiply_in_place, var_ranges, output_size, lookup_info,
-            include_indexes)
+    def compute_sum(add_in_place, sum_block, multiply_in_place,
+            initialize_sum=None, include_indexes=False):
+        return semiring_einsum_forward_impl(equation, block_size, args,
+            initialize_sum, add_in_place, sum_block, multiply_in_place,
+            equation.reduce_input_to_output, include_indexes)
 
     return func(compute_sum)
 
-def semiring_einsum_forward_impl(args, initialize_sum, add_in_place,
-        multiply_in_place, variable_ranges, output_size, lookup_info,
+def semiring_einsum_forward_impl(equation, block_size, args, initialize_sum,
+        add_in_place, sum_block, multiply_in_place, reduce_info,
         include_indexes):
+    var_ranges = reduce_info.get_ranges(equation, args, block_size)
 
     def generate_terms():
-        for var_values in itertools.product(*variable_ranges):
+        for var_values in itertools.product(*var_ranges):
 
             def generate_factors():
-                for arg, arg_info in zip(args, lookup_info):
+                for arg, arg_info in zip(args, reduce_info.lookup_info):
+                    # Get a slice of arg based on the current values of the
+                    # reduced variables. The result has a shape of
+                    # output_vars x reduced_vars.
+                    #yield arg_info.lookup(arg, var_values)
                     yield arg_info.lookup(arg, var_values)
 
+            term_size = reduce_info.get_term_size(equation, args, var_values)
+            # Multiply the args together.
             term = reduce_in_place(
                 multiply_in_place,
                 generate_factors(),
-                lambda x: adjust_size(x, output_size))
+                # Make sure to clone and resize the first factor so that it
+                # has the correct shape. Subsequent multiplications will
+                # automatically broadcast to the correct shape.
+                lambda x: adjust_size(x, term_size))
+            # Sum over the reduced variables to get a tensor with the shape of
+            # output_vars.
+            reduced_term = sum_block(term, reduce_info.reduced_dims)
             if include_indexes:
-                yield term, var_values
+                # TODO This needs to change for argmax
+                yield reduced_term, var_values
             else:
-                yield term
+                yield reduced_term
 
+    # Add all the terms together.
     return reduce_in_place(add_in_place, generate_terms(), initialize_sum)
 
 def adjust_size(arg, size):

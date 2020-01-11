@@ -4,7 +4,8 @@ from .extend import semiring_einsum_forward, EquationForForward
 
 def real_einsum_forward(
         equation: EquationForForward,
-        *args: torch.Tensor) -> torch.Tensor:
+        *args: torch.Tensor,
+        block_size) -> torch.Tensor:
     r"""Einsum where addition and multiplication have their usual meanings.
 
     When dealing with summations over more than two input tensors at once,
@@ -16,13 +17,16 @@ def real_einsum_forward(
         with ``equation``.
     :return: Output of einsum.
     """
-    return semiring_einsum_forward(equation, args, _callback)
+    return semiring_einsum_forward(equation, block_size, args, _callback)
 
 def _callback(compute_sum):
-    return compute_sum(_add_in_place, _multiply_in_place)
+    return compute_sum(_add_in_place, _sum_block, _multiply_in_place)
 
 def _add_in_place(a, b):
     a.add_(b)
+
+def _sum_block(a, dims):
+    return torch.sum(a, dim=dims)
 
 def _multiply_in_place(a, b):
     a.mul_(b)
