@@ -10,6 +10,7 @@ class Equation:
         self.num_variables = num_variables
         self.reduce_input_to_output = None
         self.reduce_others_to_input = None
+        self.reduce_all_to_input = None
 
     def validate_sizes(self, args):
         for loc_list in self.variable_locations:
@@ -46,6 +47,16 @@ class Equation:
                 other_vars[i] = self.output_variables
                 self.reduce_others_to_input.append(create_reduce_info(
                     other_vars, input_var_list))
+
+    def prepare_for_log_backward(self):
+        if self.reduce_all_to_input is None:
+            self.reduce_all_to_input = []
+            inputs = self.input_variables + [self.output_variables]
+            for input_var_list in self.input_variables:
+                reduce_info = create_reduce_info(
+                    inputs, input_var_list)
+                C_lookup_info = reduce_info.lookup_info.pop()
+                self.reduce_all_to_input.append((reduce_info, C_lookup_info))
 
 def compile_equation(equation: str) -> Equation:
     r"""Pre-compile an einsum equation for use with the einsum functions in
