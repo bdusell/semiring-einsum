@@ -102,8 +102,8 @@ class ReduceInfo:
         self.reduced_dims = reduced_dims
 
     def get_ranges(self, parsed_equation, args, block_size):
-        sizes = parsed_equation.get_sizes(args, self.reduced_variables)
-        return [list(generate_slices(s, block_size)) for s in sizes]
+        return get_ranges(parsed_equation, args, self.reduced_variables,
+            block_size)
 
     def get_term_size(self, parsed_equation, args, var_values):
         # Compute the size of each of the terms in an einsum. Each term is a
@@ -117,6 +117,10 @@ class ReduceInfo:
             # the sizes of the slices.
             [s.stop - s.start for s in var_values]
         )
+
+def get_ranges(parsed_equation, args, variables, block_size):
+    sizes = parsed_equation.get_sizes(args, variables)
+    return [list(generate_slices(s, block_size)) for s in sizes]
 
 def generate_slices(total_size, block_size):
     lo = 0
@@ -143,7 +147,7 @@ class LookupInfo:
         return arg[index].permute(self.permutation)
 
 def create_reduce_info(parsed_equation, input_var_lists, reduced_vars,
-        output_vars):
+        output_vars, reduced_dims_offset=0):
     # The shape of the final, reshaped tensor will correspond to
     # output_vars + reduced_vars.
     lookup_info = []
@@ -172,7 +176,10 @@ def create_reduce_info(parsed_equation, input_var_lists, reduced_vars,
                 num_extra_vars += 1
             permutation.append(perm_index)
         lookup_info.append(LookupInfo(index_map, num_extra_vars, permutation))
-    reduced_dims = tuple(range(len(output_vars), len(output_vars) + len(reduced_vars)))
+    reduced_dims = tuple(range(
+        len(output_vars) + reduced_dims_offset,
+        len(output_vars) + len(reduced_vars)
+    ))
     return ReduceInfo(reduced_vars, lookup_info, output_vars, reduced_dims)
 
 class EquationForBackward(EquationForForward):
@@ -218,7 +225,8 @@ def compile_equation_for_backward(equation):
             equation,
             other_input_vars,
             reduced_vars,
-            input_vars))
+            input_vars,
+            reduced_dims_offset=len(vars_in_output_but_not_input)))
         other_reduced_variables.append(vars_not_in_output_or_input)
     return EquationForBackward(
         equation,

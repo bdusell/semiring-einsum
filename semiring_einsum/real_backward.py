@@ -4,6 +4,7 @@ import typing
 import torch
 
 from .extend import (
+    get_ranges,
     adjust_size,
     reduce_in_place,
     EquationForBackward)
@@ -11,6 +12,7 @@ from .extend import (
 def real_einsum_backward(
         equation: EquationForBackward,
         args: typing.Sequence[torch.Tensor],
+        block_size: int,
         needs_grad: typing.Sequence[bool],
         grad: torch.Tensor) -> typing.List[typing.Optional[torch.Tensor]]:
     r"""Compute the derivative of
@@ -45,12 +47,12 @@ def real_einsum_backward(
                 grad_size, output_size))
     arg_grads = []
     output_to_input_ranges = [
-        x.get_ranges(equation, args)
+        x.get_ranges(equation, args, block_size)
         for x in equation.reduce_output_to_input
     ]
     other_to_input_ranges = [
-        [range(y) for y in equation.get_sizes(args, x)]
-        for x in equation.other_reduced_variables
+        get_ranges(equation, args, variables, block_size)
+        for variables in equation.other_reduced_variables
     ]
     other_args = [
         [
@@ -62,11 +64,12 @@ def real_einsum_backward(
     ]
     for i, arg in enumerate(args):
         if needs_grad[i]:
-            arg_size = tuple(equation.get_sizes(args, equation.input_variables[i]))
 
             def generate_terms():
                 for var_values in itertools.product(*output_to_input_ranges[i]):
-                    lookup_info = equation.reduce_output_to_input[i].lookup_info[0]
+                    reduce_info = equation.reduce_output_to_input[i]
+                    inner_reduce_info = equation.reduce_others_to_input[i]
+                    lookup_info, = reduce_info.lookup_info
                     grad_slice = lookup_info.lookup(grad, var_values)
 
                     def generate_inner_terms():
@@ -74,21 +77,37 @@ def real_einsum_backward(
                             reduced_var_values = var_values + other_var_values
 
                             def generate_factors():
-                                lookup_info_list = equation.reduce_others_to_input[i].lookup_info
-                                for other_arg, lookup_info in zip(other_args[i], lookup_info_list):
-                                    yield lookup_info.lookup(other_arg, reduced_var_values)
+                                for other_arg, inner_lookup_info in zip(
+                                    other_args[i],
+                                    inner_reduce_info.lookup_info
+                                ):
+                                    yield inner_lookup_info.lookup(other_arg, reduced_var_values)
 
-                            yield reduce_in_place(
+                            term_size = reduce_info.get_term_size(
+                                equation, args, reduced_var_values)
+                            # term : arg_vars x output_vars x other_vars
+                            term = reduce_in_place(
                                 _multiply_in_place,
                                 generate_factors(),
-                                lambda x: adjust_size(x, arg_size))
-
+                                lambda x: adjust_size(x, term_size))
+                            # Sum over all variables that are not in the
+                            # output or args[i].
+                            # yield : arg_vars x output_vars
+                            yield sum_block(term, inner_reduce_info.reduced_dims)
+                    # Sum the inner terms together.
+                    # term : arg_vars x output_vars
                     term = reduce_in_place(
                         _add_in_place,
                         generate_inner_terms())
+                    # Multiply by the output's gradient.
                     term.mul_(grad_slice)
-                    yield term
+                    # Sum over all variables that are in the output but not in
+                    # args[i].
+                    # yield : arg_vars
+                    yield sum_block(term, reduce_info.reduced_dims)
 
+            # Sum the terms together.
+            # arg_grad : arg_vars
             arg_grad = reduce_in_place(
                 _add_in_place,
                 generate_terms())
@@ -99,6 +118,9 @@ def real_einsum_backward(
 
 def _add_in_place(a, b):
     a.add_(b)
+
+def sum_block(a, dims):
+    return torch.sum(a, dim=dims)
 
 def _multiply_in_place(a, b):
     a.mul_(b)
