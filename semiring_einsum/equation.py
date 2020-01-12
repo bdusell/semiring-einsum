@@ -95,25 +95,25 @@ class ReduceInfo:
         self.reduced_variables = reduced_variables
         self.reduced_dims = reduced_dims
 
-    def get_ranges(self, parsed_equation, args, block_size):
-        return get_ranges(parsed_equation, args, self.reduced_variables,
+    def get_ranges(self, equation, args, block_size):
+        return get_ranges(equation, args, self.reduced_variables,
             block_size)
 
-    def get_term_size(self, parsed_equation, args, var_values):
+    def get_term_size(self, equation, args, var_values):
         # Compute the size of each of the terms in an einsum. Each term is a
         # slice over ranges of the summed variables.
         # Note that var_values is a list of slices, not a list of ints.
         return (
             # The output dimensions come first, and their sizes match the
             # inputs.
-            parsed_equation.get_sizes(args, self.output_variables) +
+            equation.get_sizes(args, self.output_variables) +
             # The summed dimensions come last, and their sizes correspond to
             # the sizes of the slices.
             [s.stop - s.start for s in var_values]
         )
 
-def get_ranges(parsed_equation, args, variables, block_size):
-    sizes = parsed_equation.get_sizes(args, variables)
+def get_ranges(equation, args, variables, block_size):
+    sizes = equation.get_sizes(args, variables)
     return [list(generate_slices(s, block_size)) for s in sizes]
 
 def generate_slices(total_size, block_size):

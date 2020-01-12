@@ -1,17 +1,17 @@
-import itertools
 import typing
 
 import torch
 
-from .equation import Equation, get_ranges
-from .extend import adjust_size, reduce_in_place
+from .equation import Equation
+from .extend import semiring_einsum_forward_impl
+from .real_forward import _add_in_place, _sum_block, _multiply_in_place
 
 def real_einsum_backward(
         equation: Equation,
         args: typing.Sequence[torch.Tensor],
-        block_size: int,
         needs_grad: typing.Sequence[bool],
-        grad: torch.Tensor) -> typing.List[typing.Optional[torch.Tensor]]:
+        grad: torch.Tensor,
+        block_size: int) -> typing.List[typing.Optional[torch.Tensor]]:
     r"""Compute the derivative of
     :py:func:`~semiring_einsum.real_einsum_forward`.
 
@@ -31,11 +31,10 @@ def real_einsum_backward(
         gradient.
     """
     # grad : same size as output of equation
-    if not isinstance(equation, EquationForBackward):
-        raise TypeError
     if len(args) != len(needs_grad):
         raise ValueError('length of args is not equal to length of needs_grad')
     equation.validate_sizes(args)
+    equation.prepare_for_backward()
     output_size = tuple(equation.get_sizes(args, equation.output_variables))
     grad_size = tuple(grad.size())
     if grad_size != output_size:
@@ -43,81 +42,23 @@ def real_einsum_backward(
             'size of gradient {} does not match expected size {}'.format(
                 grad_size, output_size))
     arg_grads = []
-    output_to_input_ranges = [
-        x.get_ranges(equation, args, block_size)
-        for x in equation.reduce_output_to_input
-    ]
-    other_to_input_ranges = [
-        get_ranges(equation, args, variables, block_size)
-        for variables in equation.other_reduced_variables
-    ]
-    other_args = [
-        [
-            arg
-            for j, arg in enumerate(args)
-            if j != i
-        ]
-        for i in range(len(args))
-    ]
-    for i, arg in enumerate(args):
-        if needs_grad[i]:
-
-            def generate_terms():
-                for var_values in itertools.product(*output_to_input_ranges[i]):
-                    reduce_info = equation.reduce_output_to_input[i]
-                    inner_reduce_info = equation.reduce_others_to_input[i]
-                    lookup_info, = reduce_info.lookup_info
-                    grad_slice = lookup_info.lookup(grad, var_values)
-
-                    def generate_inner_terms():
-                        for other_var_values in itertools.product(*other_to_input_ranges[i]):
-                            reduced_var_values = var_values + other_var_values
-
-                            def generate_factors():
-                                for other_arg, inner_lookup_info in zip(
-                                    other_args[i],
-                                    inner_reduce_info.lookup_info
-                                ):
-                                    yield inner_lookup_info.lookup(other_arg, reduced_var_values)
-
-                            term_size = reduce_info.get_term_size(
-                                equation, args, reduced_var_values)
-                            # term : arg_vars x output_vars x other_vars
-                            term = reduce_in_place(
-                                _multiply_in_place,
-                                generate_factors(),
-                                lambda x: adjust_size(x, term_size))
-                            # Sum over all variables that are not in the
-                            # output or args[i].
-                            # yield : arg_vars x output_vars
-                            yield sum_block(term, inner_reduce_info.reduced_dims)
-                    # Sum the inner terms together.
-                    # term : arg_vars x output_vars
-                    term = reduce_in_place(
-                        _add_in_place,
-                        generate_inner_terms())
-                    # Multiply by the output's gradient.
-                    term.mul_(grad_slice)
-                    # Sum over all variables that are in the output but not in
-                    # args[i].
-                    # yield : arg_vars
-                    yield sum_block(term, reduce_info.reduced_dims)
-
-            # Sum the terms together.
-            # arg_grad : arg_vars
-            arg_grad = reduce_in_place(
+    for i, (arg, arg_needs_grad, arg_reduce_info) in enumerate(zip(
+            args, needs_grad, equation.reduce_others_to_input)):
+        if arg_needs_grad:
+            inputs = list(args)
+            inputs[i] = grad
+            arg_grad = semiring_einsum_forward_impl(
+                equation,
+                args,
+                block_size,
+                inputs,
+                None,
                 _add_in_place,
-                generate_terms())
+                _sum_block,
+                _multiply_in_place,
+                arg_reduce_info,
+                False)
         else:
             arg_grad = None
         arg_grads.append(arg_grad)
     return arg_grads
-
-def _add_in_place(a, b):
-    a.add_(b)
-
-def sum_block(a, dims):
-    return torch.sum(a, dim=dims)
-
-def _multiply_in_place(a, b):
-    a.mul_(b)

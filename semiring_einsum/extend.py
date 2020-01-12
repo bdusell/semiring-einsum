@@ -81,31 +81,38 @@ def semiring_einsum_forward(
     :param args: A list of input tensors.
     :param func: A callback of the form described above.
     """
-    equation.prepare_for_forward()
     equation.validate_sizes(args)
+    equation.prepare_for_forward()
 
     def compute_sum(add_in_place, sum_block, multiply_in_place,
             initialize_sum=None, include_indexes=False):
-        return semiring_einsum_forward_impl(equation, block_size, args,
-            initialize_sum, add_in_place, sum_block, multiply_in_place,
-            equation.reduce_input_to_output, include_indexes)
+        return semiring_einsum_forward_impl(
+            equation,
+            args,
+            block_size,
+            args,
+            initialize_sum,
+            add_in_place,
+            sum_block,
+            multiply_in_place,
+            equation.reduce_input_to_output,
+            include_indexes)
 
     return func(compute_sum)
 
-def semiring_einsum_forward_impl(equation, block_size, args, initialize_sum,
-        add_in_place, sum_block, multiply_in_place, reduce_info,
-        include_indexes):
+def semiring_einsum_forward_impl(equation, args, block_size, inputs,
+        initialize_sum, add_in_place, sum_block, multiply_in_place,
+        reduce_info, include_indexes):
     var_ranges = reduce_info.get_ranges(equation, args, block_size)
 
     def generate_terms():
         for var_values in itertools.product(*var_ranges):
 
             def generate_factors():
-                for arg, arg_info in zip(args, reduce_info.lookup_info):
+                for arg, arg_info in zip(inputs, reduce_info.lookup_info):
                     # Get a slice of arg based on the current values of the
                     # reduced variables. The result has a shape of
                     # output_vars x reduced_vars.
-                    #yield arg_info.lookup(arg, var_values)
                     yield arg_info.lookup(arg, var_values)
 
             term_size = reduce_info.get_term_size(equation, args, var_values)
