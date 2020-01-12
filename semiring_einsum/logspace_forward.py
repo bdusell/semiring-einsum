@@ -1,9 +1,10 @@
 import torch
 
-from .extend import semiring_einsum_forward, EquationForForward
+from .equation import Equation
+from .extend import semiring_einsum_forward
 
 def logspace_einsum_forward(
-        equation: EquationForForward,
+        equation: Equation,
         *args: torch.Tensor,
         block_size : int) -> torch.Tensor:
     r"""Einsum where addition :math:`a + b` is replaced with
@@ -42,7 +43,7 @@ def logspace_einsum_forward(
         result.add_(max_values)
         return result
 
-    return semiring_einsum_forward(equation, block_size, args, callback)
+    return semiring_einsum_forward(equation, args, block_size, callback)
 
 def _max_in_place(a, b):
     torch.max(a, b, out=a)

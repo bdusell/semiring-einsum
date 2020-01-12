@@ -22,8 +22,9 @@ OUTPUT_SIZE = (A, C, D)
 class TestCompileEquation(unittest.TestCase):
 
     def test_compile_equation(self):
-        compile_equation(EQUATION_STR, backward=False)
-        compile_equation(EQUATION_STR)
+        equation = compile_equation(EQUATION_STR)
+        equation.prepare_for_forward()
+        equation.prepare_for_backward()
 
 class TestSemiringEinsum(unittest.TestCase):
 
@@ -39,7 +40,7 @@ class TestSemiringEinsum(unittest.TestCase):
         expected_result = torch.einsum(EQUATION_STR, *args)
         self.assertEqual(expected_result.size(), OUTPUT_SIZE)
         result = real_einsum_forward(
-            compile_equation(EQUATION_STR, backward=False),
+            compile_equation(EQUATION_STR),
             *args,
             block_size=3)
         self.assertEqual(result.size(), OUTPUT_SIZE)
@@ -100,7 +101,7 @@ class TestSemiringEinsum(unittest.TestCase):
         expected_result = torch.log(exp_result)
         self.assertEqual(expected_result.size(), OUTPUT_SIZE)
         result = logspace_einsum_forward(
-            compile_equation(EQUATION_STR, backward=False),
+            compile_equation(EQUATION_STR),
             *args,
             block_size=3)
         self.assertEqual(result.size(), OUTPUT_SIZE)

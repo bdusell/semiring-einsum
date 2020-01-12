@@ -3,14 +3,11 @@ import typing
 
 import torch
 
-from .extend import (
-    get_ranges,
-    adjust_size,
-    reduce_in_place,
-    EquationForBackward)
+from .equation import Equation, get_ranges
+from .extend import adjust_size, reduce_in_place
 
 def real_einsum_backward(
-        equation: EquationForBackward,
+        equation: Equation,
         args: typing.Sequence[torch.Tensor],
         block_size: int,
         needs_grad: typing.Sequence[bool],

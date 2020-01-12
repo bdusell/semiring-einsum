@@ -2,10 +2,11 @@ import typing
 
 import torch
 
-from .extend import semiring_einsum_forward, EquationForForward
+from .equation import Equation
+from .extend import semiring_einsum_forward
 
 def logspace_viterbi_einsum_forward(
-        equation: EquationForForward,
+        equation: Equation,
         *args: torch.Tensor) -> typing.Tuple[torch.Tensor, torch.LongTensor]:
     r"""Einsum where addition :math:`a + b` is replaced with
     :math:`(\max(a, b), \arg \max(a, b))`, and multiplication

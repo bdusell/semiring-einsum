@@ -1,9 +1,10 @@
 import torch
 
-from .extend import semiring_einsum_forward, EquationForForward
+from .equation import Equation
+from .extend import semiring_einsum_forward
 
 def real_einsum_forward(
-        equation: EquationForForward,
+        equation: Equation,
         *args: torch.Tensor,
         block_size : int) -> torch.Tensor:
     r"""Einsum where addition and multiplication have their usual meanings.
@@ -17,7 +18,7 @@ def real_einsum_forward(
         with ``equation``.
     :return: Output of einsum.
     """
-    return semiring_einsum_forward(equation, block_size, args, _callback)
+    return semiring_einsum_forward(equation, args, block_size, _callback)
 
 def _callback(compute_sum):
     return compute_sum(_add_in_place, _sum_block, _multiply_in_place)

@@ -3,16 +3,15 @@ import typing
 
 import torch
 
-from .extend import (
-    semiring_einsum_forward_impl,
-    EquationForBackward,
-    reduce_in_place)
+from .equation import Equation, get_ranges
+from .extend import semiring_einsum_forward_impl, reduce_in_place
 
 def logspace_einsum_backward(
-        equation: EquationForBackward,
+        equation: Equation,
         args: typing.Sequence[torch.Tensor],
         needs_grad: typing.Sequence[bool],
-        grad: torch.Tensor) -> typing.List[typing.Optional[torch.Tensor]]:
+        grad: torch.Tensor,
+        block_size: int) -> typing.List[typing.Optional[torch.Tensor]]:
     r"""Compute the derivative of
     :py:func:`~semiring_einsum.logspace_einsum_forward`.
 

@@ -1,7 +1,5 @@
-from .extend import (
-    semiring_einsum_forward,
-    parse_equation,
-    compile_equation)
+from .equation import compile_equation
+from .extend import semiring_einsum_forward
 from .function import combine
 from .real_forward import real_einsum_forward
 from .real_backward import real_einsum_backward
