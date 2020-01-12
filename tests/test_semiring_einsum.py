@@ -82,7 +82,8 @@ class TestSemiringEinsum(unittest.TestCase):
             arg.grad.zero_()
         output = einsum(
             compile_equation(EQUATION_STR),
-            *args)
+            *args,
+            block_size=3)
         loss = output.sum()
         loss.backward()
         grads = [arg.grad.clone() for arg in args]
@@ -146,13 +147,14 @@ class TestSemiringEinsum(unittest.TestCase):
             arg.grad.zero_()
         log_output = logspace_einsum(
             compile_equation(EQUATION_STR),
-            *[torch.log(arg) for arg in args])
+            *[torch.log(arg) for arg in args],
+            block_size=3)
         output = torch.exp(log_output)
         loss = output.sum()
         loss.backward()
         grads = [arg.grad.clone() for arg in args]
         for grad, expected_grad in zip(grads, expected_grads):
-            numpy.testing.assert_allclose(grad, expected_grad)
+            numpy.testing.assert_allclose(grad, expected_grad, rtol=1e-6)
 
     def test_logspace_viterbi_einsum_forward(self):
         args = [
@@ -166,8 +168,9 @@ class TestSemiringEinsum(unittest.TestCase):
         self.assertEqual(expected_maxval.size(), OUTPUT_SIZE)
         self.assertEqual(expected_argmax.size(), (*OUTPUT_SIZE, 3))
         maxval, argmax = logspace_viterbi_einsum_forward(
-            compile_equation(EQUATION_STR, backward=False),
-            *args)
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=3)
         self.assertEqual(expected_maxval.size(), OUTPUT_SIZE)
         self.assertEqual(expected_argmax.size(), (*OUTPUT_SIZE, 3))
         numpy.testing.assert_allclose(maxval, expected_maxval)
