@@ -7,7 +7,8 @@ from .extend import semiring_einsum_forward
 
 def logspace_viterbi_einsum_forward(
         equation: Equation,
-        *args: torch.Tensor) -> typing.Tuple[torch.Tensor, torch.LongTensor]:
+        *args: torch.Tensor,
+        block_size: int) -> typing.Tuple[torch.Tensor, torch.LongTensor]:
     r"""Einsum where addition :math:`a + b` is replaced with
     :math:`(\max(a, b), \arg \max(a, b))`, and multiplication
     :math:`a \times b` is replaced with addition :math:`a + b`.
@@ -28,56 +29,86 @@ def logspace_viterbi_einsum_forward(
         representing the argmax. The variables in the `k`-tuple are ordered
         by first appearance in the einsum equation.
     """
-    return semiring_einsum_forward(equation, args, _callback)
+    return semiring_einsum_forward(equation, args, block_size, _callback)
 
 def _callback(compute_sum):
     return compute_sum(
         _viterbi_max_in_place,
+        _viterbi_max_block,
         _add_in_place,
-        _viterbi_max_init,
         include_indexes=True)
+
+def _viterbi_max_in_place(a, b):
+    # a_max : X1 x ... x Xn
+    # a_argmax : X1 x ... x Xn x m
+    # b_max : X1 x ... x Xn
+    # b_argmax : X1 x ... x Xn x m
+    a_max, a_argmax = a
+    b_max, b_argmax = b
+    # Get a mask for elements where a < b.
+    # a_is_less : X1 x ... x Xn
+    a_is_less = torch.lt(a_max, b_max)
+    # Replace elements in a with the new maximum.
+    a_max[:] = torch.where(a_is_less, b_max, a_max)
+    # Replace elements in the argmax tensor with the updated index.
+    # Unfortunately there is no in-place version of where() (yet).
+    a_argmax[:] = torch.where(
+        a_is_less.unsqueeze(-1),
+        b_argmax,
+        a_argmax)
+
+def _viterbi_max_block(a, dims, var_values):
+    # Given a tensor of values `a`, return the max and argmax of `a` over
+    # the dimensions specified in `dims`. Make sure to offset the argmax
+    # indexes according to the ranges specified in `var_values`.
+    # Let `a` have n output dimensions and m reduced dimensions.
+    # a : X1 x ... x Xn x K1 x ... Km
+    # The dimensions are not necessarily in that order.
+    # max_values : X1 x ... x Xn
+    # argmax : X1 x ... x Xn x m
+    max_values, argmax = multidimensional_max(a, dims)
+    # Offset the argmax indexes.
+    # offset : 1 x ... x 1 (n times) x m
+    n = argmax.dim() - 1
+    offset_size = [1] * n
+    offset_size.append(-1)
+    offset = argmax.new_tensor([r.start for r in var_values]).view(offset_size)
+    argmax.add_(offset)
+    return max_values, argmax
+
+def multidimensional_max(a, dims):
+    # a : X1 x ... x Xn x K1 x ... Km (not necessarily in this order)
+    dim_max = a
+    argmaxes = []
+    # Iterative over dimensions in reverse so we don't need to adjust
+    # the remaining dimensions after reducing each one.
+    for dim in reversed(dims):
+        # dim_max : X1 x ... x Xn x K1 x ... x Ki
+        # argmaxes : m-i x [X1 x ... x Xn x K1 x ... x Ki]
+        dim_max, dim_argmax = torch.max(dim_max, dim=dim)
+        # dim_argmax : X1 x ... x Xn x K1 x ... x Ki-1
+        argmaxes = [lookup_dim(x, dim_argmax, dim) for x in argmaxes]
+        # argmaxes : m-i x [X1 x ... x Xn x K1 x ... x Ki-1]
+        argmaxes.append(dim_argmax)
+        # argmaxes : m-i+1 x [X1 x ... x Xn x K1 x ... x Ki-1]
+    # dim_max : X1 x ... x Xn
+    # argmaxes : m x [X1 x ... x Xn]
+    # Remember to reverse the argmaxes, since we iterated in reverse.
+    argmaxes.reverse()
+    argmax = torch.stack(argmaxes, dim=-1)
+    # argmax : X1 x ... x Xn x m
+    return dim_max, argmax
+
+def lookup_dim(x, i, dim):
+    # x : X1 x ... x Xdim x ... x Xn
+    # i : X1 x ... x Xn, with int values in [0, dim)
+    # return : X1 x ... x Xn
+    # return[x1, ..., xn] = x[x1, ..., i[x1, ..., xn], ..., xn]
+    index = i.unsqueeze(dim)
+    # index : X1 x ... x 1 x ... x Xn
+    result = torch.gather(x, dim, index)
+    # result : X1 x ... x 1 x ... x Xn
+    return result.squeeze(dim)
 
 def _add_in_place(a, b):
     a.add_(b)
-
-def _viterbi_max_init(a):
-    a, a_indexes = a
-    index_tensor_size = list(a.size())
-    index_tensor_size.append(len(a_indexes))
-    # First index is always zeros.
-    index_tensor = a.new_zeros(index_tensor_size, dtype=torch.long)
-    return a, index_tensor
-
-def _viterbi_max_in_place(a, b):
-    # a : X1 x ... x Xn
-    # a_index_tensor : X1 x ... x Xn x K
-    # b : X1 x ... x Xn
-    # b_indexes : K x [int]
-    a, a_index_tensor = a
-    b, b_indexes = b
-    # Get a mask for elements where a < b.
-    # a_is_less : X1 x ... x Xn
-    a_is_less = torch.lt(a, b)
-    # Replace elements in a with the new maximum.
-    a[:] = torch.where(a_is_less, b, a)
-    # Replace elements in the argmax tensor with the updated index.
-    n = a.dim()
-    K = len(b_indexes)
-    view_size = [1] * n
-    view_size.append(K)
-    expand_size = list(a_is_less.size())
-    expand_size.append(-1)
-    # b_index_tensor : 1 x ... x 1 (n times) x K
-    b_index_tensor = (
-        torch.tensor(b_indexes, device=b.device)
-            .view(view_size)
-            .expand(expand_size))
-    # a_is_less.unsqueeze(-1) : X1 x ... x Xn x 1
-    # Unfortunately there is no in-place version of where() (yet).
-    a_index_tensor[:] = torch.where(
-        a_is_less.unsqueeze(-1),
-        b_index_tensor,
-        a_index_tensor)
-    # This would be a hacky but correct method of doing the same thing
-    # in-place:
-    # a_index_tensor.masked_scatter_(a_is_less.unsqueeze(-1), b_index_tensor)

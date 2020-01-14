@@ -126,12 +126,11 @@ def semiring_einsum_forward_impl(equation, args, block_size, inputs,
                 lambda x: adjust_size(x, term_size))
             # Sum over the reduced variables to get a tensor with the shape of
             # output_vars.
-            reduced_term = sum_block(term, reduce_info.reduced_dims)
             if include_indexes:
-                # TODO This needs to change for argmax
-                yield reduced_term, var_values
+                reduced_term = sum_block(term, reduce_info.reduced_dims, var_values)
             else:
-                yield reduced_term
+                reduced_term = sum_block(term, reduce_info.reduced_dims)
+            yield reduced_term
 
     # Add all the terms together.
     return reduce_in_place(add_in_place, generate_terms(), initialize_sum)
