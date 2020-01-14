@@ -85,13 +85,12 @@ def semiring_einsum_forward(
     equation.prepare_for_forward()
 
     def compute_sum(add_in_place, sum_block, multiply_in_place,
-            initialize_sum=None, include_indexes=False):
+            include_indexes=False):
         return semiring_einsum_forward_impl(
             equation,
             args,
             block_size,
             args,
-            initialize_sum,
             add_in_place,
             sum_block,
             multiply_in_place,
@@ -101,8 +100,8 @@ def semiring_einsum_forward(
     return func(compute_sum)
 
 def semiring_einsum_forward_impl(equation, args, block_size, inputs,
-        initialize_sum, add_in_place, sum_block, multiply_in_place,
-        reduce_info, include_indexes):
+        add_in_place, sum_block, multiply_in_place, reduce_info,
+        include_indexes):
     var_ranges = reduce_info.get_ranges(equation, args, block_size)
 
     def generate_terms():
@@ -133,7 +132,7 @@ def semiring_einsum_forward_impl(equation, args, block_size, inputs,
             yield reduced_term
 
     # Add all the terms together.
-    return reduce_in_place(add_in_place, generate_terms(), initialize_sum)
+    return reduce_in_place(add_in_place, generate_terms())
 
 def adjust_size(arg, size):
     repeat_size = []

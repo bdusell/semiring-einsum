@@ -48,7 +48,6 @@ def logspace_einsum_backward(
         args,
         block_size,
         args,
-        initialize_sum=None,
         add_in_place=_add_in_place,
         sum_block=_sumexp_block,
         multiply_in_place=_add_in_place,

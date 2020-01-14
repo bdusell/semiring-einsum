@@ -52,7 +52,6 @@ def real_einsum_backward(
                 args,
                 block_size,
                 inputs,
-                None,
                 _add_in_place,
                 _sum_block,
                 _multiply_in_place,
