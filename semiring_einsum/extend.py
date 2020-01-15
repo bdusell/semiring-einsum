@@ -46,7 +46,12 @@ def semiring_einsum_forward(
                 def add_in_place(a, b):
                     a += b
                 def sum_block(a, dims):
-                    return torch.sum(a, dim=dims)
+                    if dims:
+                        return torch.sum(a, dim=dims)
+                    else:
+                        # This is an edge case that `torch.sum` does not
+                        # handle correctly.
+                        return a
                 def multiply_in_place(a, b):
                     a *= b
                 return compute_sum(add_in_place, sum_block, multiply_in_place)
@@ -71,7 +76,11 @@ def semiring_einsum_forward(
     ``sum_block(a, dims)`` should be a function that "sums" over multiple
     dimensions in a tensor at once. It must return its result. ``a`` is always
     a :py:class:`~torch.Tensor`. ``dims`` is a :py:class:`tuple` of
-    :py:class`int`\ s representing the dimensions in ``a`` to sum out.
+    :py:class`int`\ s representing the dimensions in ``a`` to sum out. Take
+    special care to handle the case where ``dims`` is an empty tuple --
+    in particular, keep in mind that :py:func:`~torch.sum` returns a *scalar*
+    when ``dims`` is an empty tuple. Simply returning ``a`` is sufficient to
+    handle this edge case.
 
     If ``include_indexes`` is ``True``, then ``sum_block`` will receive a
     third argument ``var_values`` which contains the current values of the

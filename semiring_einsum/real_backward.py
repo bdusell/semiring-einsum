@@ -4,7 +4,7 @@ import torch
 
 from .equation import Equation
 from .extend import semiring_einsum_forward_impl
-from .real_forward import _add_in_place, _sum_block, _multiply_in_place
+from .utils import add_in_place, sum_block, multiply_in_place
 
 def real_einsum_backward(
         equation: Equation,
@@ -53,9 +53,9 @@ def real_einsum_backward(
                 args,
                 block_size,
                 inputs,
-                _add_in_place,
-                _sum_block,
-                _multiply_in_place,
+                add_in_place,
+                sum_block,
+                multiply_in_place,
                 arg_reduce_info,
                 False)
         else:

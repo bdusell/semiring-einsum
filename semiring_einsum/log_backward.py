@@ -5,6 +5,7 @@ import torch
 
 from .equation import Equation, get_ranges
 from .extend import semiring_einsum_forward_impl, reduce_in_place, adjust_size
+from .utils import add_in_place, sum_block
 
 def log_einsum_backward(
         equation: Equation,
@@ -48,9 +49,9 @@ def log_einsum_backward(
         args,
         block_size,
         args,
-        add_in_place=_add_in_place,
+        add_in_place=add_in_place,
         sum_block=_sumexp_block,
-        multiply_in_place=_add_in_place,
+        multiply_in_place=add_in_place,
         reduce_info=equation.reduce_input_to_output,
         include_indexes=False)
     # C : same size as output of equation
@@ -71,25 +72,19 @@ def log_einsum_backward(
 
                     term_size = reduce_info.get_term_size(equation, args, var_values)
                     term = reduce_in_place(
-                        _add_in_place,
+                        add_in_place,
                         generate_factors(),
                         lambda x: adjust_size(x, term_size))
                     term.exp_()
                     term.mul_(C_lookup_info.lookup(C, var_values))
-                    yield _sum_block(term, reduce_info.reduced_dims)
+                    yield sum_block(term, reduce_info.reduced_dims)
 
-            arg_grad = reduce_in_place(_add_in_place, generate_terms())
+            arg_grad = reduce_in_place(add_in_place, generate_terms())
         else:
             arg_grad = None
         arg_grads.append(arg_grad)
     return arg_grads
 
-def _add_in_place(a, b):
-    a.add_(b)
-
 def _sumexp_block(a, dims):
     a.exp_()
-    return torch.sum(a, dim=dims)
-
-def _sum_block(a, dims):
-    return torch.sum(a, dim=dims)
+    return sum_block(a, dims)

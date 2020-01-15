@@ -4,6 +4,7 @@ import torch
 
 from .equation import Equation
 from .extend import semiring_einsum_forward
+from .utils import add_in_place
 
 def log_viterbi_einsum_forward(
         equation: Equation,
@@ -35,12 +36,12 @@ def log_viterbi_einsum_forward(
 
 def _callback(compute_sum):
     return compute_sum(
-        _viterbi_max_in_place,
-        _viterbi_max_block,
-        _add_in_place,
+        viterbi_max_in_place,
+        viterbi_max_block,
+        add_in_place,
         include_indexes=True)
 
-def _viterbi_max_in_place(a, b):
+def viterbi_max_in_place(a, b):
     # a_max : X1 x ... x Xn
     # a_argmax : X1 x ... x Xn x m
     # b_max : X1 x ... x Xn
@@ -59,7 +60,7 @@ def _viterbi_max_in_place(a, b):
         b_argmax,
         a_argmax)
 
-def _viterbi_max_block(a, dims, var_values):
+def viterbi_max_block(a, dims, var_values):
     # Given a tensor of values `a`, return the max and argmax of `a` over
     # the dimensions specified in `dims`. Make sure to offset the argmax
     # indexes according to the ranges specified in `var_values`.
@@ -68,7 +69,7 @@ def _viterbi_max_block(a, dims, var_values):
     # The dimensions are not necessarily in that order.
     # max_values : X1 x ... x Xn
     # argmax : X1 x ... x Xn x m
-    max_values, argmax = multidimensional_max(a, dims)
+    max_values, argmax = max_argmax_block(a, dims)
     # Offset the argmax indexes.
     # offset : 1 x ... x 1 (n times) x m
     n = argmax.dim() - 1
@@ -78,7 +79,7 @@ def _viterbi_max_block(a, dims, var_values):
     argmax.add_(offset)
     return max_values, argmax
 
-def multidimensional_max(a, dims):
+def max_argmax_block(a, dims):
     # a : X1 x ... x Xn x K1 x ... Km (not necessarily in this order)
     dim_max = a
     argmaxes = []
@@ -111,6 +112,3 @@ def lookup_dim(x, i, dim):
     result = torch.gather(x, dim, index)
     # result : X1 x ... x 1 x ... x Xn
     return result.squeeze(dim)
-
-def _add_in_place(a, b):
-    a.add_(b)

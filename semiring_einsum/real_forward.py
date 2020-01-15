@@ -2,6 +2,7 @@ import torch
 
 from .equation import Equation
 from .extend import semiring_einsum_forward
+from .utils import add_in_place, sum_block, multiply_in_place
 
 def real_einsum_forward(
         equation: Equation,
@@ -26,13 +27,4 @@ def real_einsum_forward(
     return semiring_einsum_forward(equation, args, block_size, _callback)
 
 def _callback(compute_sum):
-    return compute_sum(_add_in_place, _sum_block, _multiply_in_place)
-
-def _add_in_place(a, b):
-    a.add_(b)
-
-def _sum_block(a, dims):
-    return torch.sum(a, dim=dims)
-
-def _multiply_in_place(a, b):
-    a.mul_(b)
+    return compute_sum(add_in_place, sum_block, multiply_in_place)
