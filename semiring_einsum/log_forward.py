@@ -3,17 +3,18 @@ import torch
 from .equation import Equation
 from .extend import semiring_einsum_forward
 
-def logspace_einsum_forward(
+def log_einsum_forward(
         equation: Equation,
         *args: torch.Tensor,
         block_size : int) -> torch.Tensor:
-    r"""Einsum where addition :math:`a + b` is replaced with
+    r"""Log-space einsum, where addition :math:`a + b` is replaced with
     :math:`\log(\exp a + \exp b)`, and multiplication :math:`a \times b` is
     replaced with addition :math:`a + b`.
 
     :param equation: A pre-compiled equation.
     :param args: Input tensors. The number of input tensors must be compatible
         with ``equation``.
+    :param block_size: Block size used to control memory usage.
     :return: Output of einsum.
     """
     def callback(compute_sum):

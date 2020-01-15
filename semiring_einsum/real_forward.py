@@ -9,13 +9,18 @@ def real_einsum_forward(
         block_size : int) -> torch.Tensor:
     r"""Einsum where addition and multiplication have their usual meanings.
 
-    When dealing with summations over more than two input tensors at once,
-    this can be even more memory efficient (if slower) than
+    This function has different memory and runtime characteristics than
+    :py:func:`torch.einsum`, which can be tuned with ``block_size``. Higher
+    values of ``block_size`` result in faster runtime and higher memory usage.
+
+    In some cases, when dealing with summations over more than two input
+    tensors at once, this implementation can have better space complexity than
     :py:func:`torch.einsum`.
 
     :param equation: A pre-compiled equation.
     :param args: Input tensors. The number of input tensors must be compatible
         with ``equation``.
+    :param block_size: Block size used to control memory usage.
     :return: Output of einsum.
     """
     return semiring_einsum_forward(equation, args, block_size, _callback)

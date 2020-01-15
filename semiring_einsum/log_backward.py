@@ -6,27 +6,27 @@ import torch
 from .equation import Equation, get_ranges
 from .extend import semiring_einsum_forward_impl, reduce_in_place, adjust_size
 
-def logspace_einsum_backward(
+def log_einsum_backward(
         equation: Equation,
         args: typing.Sequence[torch.Tensor],
         needs_grad: typing.Sequence[bool],
         grad: torch.Tensor,
         block_size: int) -> typing.List[typing.Optional[torch.Tensor]]:
     r"""Compute the derivative of
-    :py:func:`~semiring_einsum.logspace_einsum_forward`.
+    :py:func:`~semiring_einsum.log_einsum_forward`.
 
     Like the forward pass, the backward pass is done in memory-efficient
-    fashion by doing summations in-place.
+    fashion by doing summations in fixed-size chunks.
 
     :param equation: Pre-compiled einsum equation. The derivative of the
-        logspace einsum operation specified by this equation will be computed.
-        The equation must have been compiled with ``backward=True``.
-    :param args: The inputs to the logspace einsum operation whose derivative
+        log-space einsum operation specified by this equation will be computed.
+    :param args: The inputs to the log-space einsum operation whose derivative
         is being computed.
     :param needs_grad: Indicates which inputs in ``args`` require gradient.
     :param grad: The gradient of the loss function with respect to the output
-        of the logspace einsum operation.
-    :return: The gradients with respect to each of the inputs to the logspace
+        of the log-space einsum operation.
+    :param block_size: Block size used to control memory usage.
+    :return: The gradients with respect to each of the inputs to the log-space
         einsum operation. Returns ``None`` for inputs that do not require
         gradient.
     """

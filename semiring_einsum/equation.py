@@ -1,9 +1,12 @@
 import itertools
 
 class Equation:
+    r"""An einsum equation that has been pre-compiled into some useful data
+    structures."""
 
-    def __init__(self, variable_locations, input_variables, output_variables,
-            num_variables):
+    def __init__(self, source, variable_locations, input_variables,
+            output_variables, num_variables):
+        self.source = source
         self.variable_locations = variable_locations
         self.input_variables = input_variables
         self.output_variables = output_variables
@@ -83,6 +86,7 @@ def compile_equation(equation: str) -> Equation:
     output_dims = [char_to_int[c] for c in output_vars]
     num_variables = len(char_to_int)
     return Equation(
+        equation,
         int_to_arg_dims,
         args_dims,
         output_dims,
@@ -98,6 +102,8 @@ def get_variables_not_in(variables, excluded):
     return result
 
 class ReduceInfo:
+    r"""Holds data structures that facilitate the basic einsum operation of
+    multiplying terms together while summing over multiple dimensions."""
 
     def __init__(self, lookup_info, output_variables, reduced_variables,
             reduced_dims):
@@ -137,6 +143,8 @@ def generate_slices(total_size, block_size):
 _COLON = slice(None)
 
 class LookupInfo:
+    r"""Holds data structures for slicing, unsqueezing, and permuting a tensor
+    so that all of its dimensions line up in a predictable way."""
 
     def __init__(self, index_map, num_extra_vars, permutation):
         self.index_map = index_map
@@ -152,6 +160,8 @@ class LookupInfo:
         return arg[index].permute(self.permutation)
 
 def create_reduce_info(input_vars, output_vars):
+    r"""Pre-compile a data structure that will help reduce the variables
+    given in ``input_vars`` to the variables in ``output_vars``."""
     reduced_vars = get_variables_not_in(
         (v for var_list in input_vars for v in var_list),
         set(output_vars))

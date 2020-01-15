@@ -5,17 +5,19 @@ import torch
 from .equation import Equation
 from .extend import semiring_einsum_forward
 
-def logspace_viterbi_einsum_forward(
+def log_viterbi_einsum_forward(
         equation: Equation,
         *args: torch.Tensor,
         block_size: int) -> typing.Tuple[torch.Tensor, torch.LongTensor]:
-    r"""Einsum where addition :math:`a + b` is replaced with
+    r"""Viterbi einsum, where addition :math:`a + b` is replaced with
     :math:`(\max(a, b), \arg \max(a, b))`, and multiplication
-    :math:`a \times b` is replaced with addition :math:`a + b`.
+    :math:`a \times b` is replaced with log-space multiplication
+    :math:`a + b`.
 
     :param equation: A pre-compiled equation.
     :param args: Input tensors. The number of input tensors must be compatible
         with ``equation``.
+    :param block_size: Block size used to control memory usage.
     :return: A tuple containing the max and argmax of the einsum operation.
         The first element of the tuple simply contains the maximum values
         of the terms "summed" over by einsum. The second element contains

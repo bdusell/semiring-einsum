@@ -19,13 +19,14 @@ def real_einsum_backward(
     fashion by doing summations in-place.
 
     :param equation: Pre-compiled einsum equation. The derivative of the
-        logspace einsum operation specified by this equation will be computed.
+        einsum operation specified by this equation will be computed.
         The equation must have been compiled with ``backward=True``.
-    :param args: The inputs to the logspace einsum operation whose derivative
+    :param args: The inputs to the einsum operation whose derivative
         is being computed.
     :param needs_grad: Indicates which inputs in ``args`` require gradient.
     :param grad: The gradient of the loss function with respect to the output
         of the einsum operation.
+    :param block_size: Block size used to control memory usage.
     :return: The gradients with respect to each of the inputs to the
         einsum operation. Returns ``None`` for inputs that do not require
         gradient.
