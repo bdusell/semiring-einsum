@@ -156,6 +156,30 @@ class TestSemiringEinsum(unittest.TestCase):
         for grad, expected_grad in zip(grads, expected_grads):
             numpy.testing.assert_allclose(grad, expected_grad, rtol=1e-6)
 
+    def test_log_einsum_overflow(self):
+        # Test that log einsum does not overflow when dealing with large
+        # values.
+        args = [
+            torch.nn.Parameter(torch.empty(size, device=self.device))
+            for size in SIZES
+        ]
+        for arg in args:
+            arg.data.uniform_(0.0, 100.0, generator=self.generator)
+        # Make sure the arguments would cause exp() to overflow.
+        for arg in args:
+            self.assertTrue(torch.isinf(torch.exp(arg)).sum().ne(0).item())
+        output = log_einsum(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=3)
+        # The output should not have inf or nan.
+        self.assertTrue(torch.isfinite(output).prod().eq(1).item())
+        loss = output.sum()
+        loss.backward()
+        for arg in args:
+            # The gradients should not have inf or nan.
+            self.assertTrue(torch.isfinite(arg.grad).prod().eq(1).item())
+
     def test_log_viterbi_einsum_forward(self):
         args = [
             torch.empty(size, device=self.device)
