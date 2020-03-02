@@ -5,7 +5,14 @@ import torch
 
 from .equation import Equation, get_ranges
 from .extend import semiring_einsum_forward_impl, reduce_in_place, adjust_size
-from .utils import add_in_place, sum_block
+from .utils import (
+    max_in_place,
+    max_block,
+    add_in_place,
+    sum_block,
+    clip_max_values,
+    resize_max_values
+)
 
 def log_einsum_backward(
         equation: Equation,
@@ -43,6 +50,37 @@ def log_einsum_backward(
         raise ValueError(
             'size of gradient {} does not match expected size {}'.format(
                 grad_size, output_size))
+    # The gradient of logsumexp is softmax (logsumexp is a soft version of max,
+    # and softmax is a soft version of argmax). So essentially we're computing
+    # a softmax here. In order to avoid overflow in the exp() function, we need
+    # to exploit the identity
+    #     \frac{ \exp(x) }{ \sum_{x'} \exp(x') } =
+    #         \frac{ \exp(x-c) }{ \sum_{x'} \exp(x'-c) }
+    # where c = \max_{x'} x'.
+    # Z is the denominator of the softmax. We first do a separate pass through
+    # the inputs to compute the maximums, then we use those to compute Z and
+    # later the numerators.
+    # max_values : same size as output of equation
+    max_values = semiring_einsum_forward_impl(
+        equation,
+        args,
+        block_size,
+        args,
+        add_in_place=max_in_place,
+        sum_block=max_block,
+        multiply_in_place=add_in_place,
+        reduce_info=equation.reduce_input_to_output,
+        include_indexes=False)
+    clip_max_values(max_values)
+    resized_max_values = resize_max_values(
+        max_values,
+        len(equation.reduce_input_to_output.reduced_variables))
+
+    def sumexpsub_block(a, dims):
+        a.sub_(resized_max_values)
+        a.exp_()
+        return sum_block(a, dims)
+
     # Z : same size as output of equation
     Z = semiring_einsum_forward_impl(
         equation,
@@ -50,7 +88,7 @@ def log_einsum_backward(
         block_size,
         args,
         add_in_place=add_in_place,
-        sum_block=_sumexp_block,
+        sum_block=sumexpsub_block,
         multiply_in_place=add_in_place,
         reduce_info=equation.reduce_input_to_output,
         include_indexes=False)
@@ -60,7 +98,7 @@ def log_einsum_backward(
     arg_grads = []
     for i, arg in enumerate(args):
         if needs_grad[i]:
-            reduce_info, C_lookup_info = equation.reduce_all_to_input[i]
+            reduce_info, output_lookup_info = equation.reduce_all_to_input[i]
             var_ranges = reduce_info.get_ranges(equation, args, block_size)
 
             def generate_terms():
@@ -75,8 +113,10 @@ def log_einsum_backward(
                         add_in_place,
                         generate_factors(),
                         lambda x: adjust_size(x, term_size))
+                    # Subtract the maximum values to avoid overflow in exp().
+                    term.sub_(output_lookup_info.lookup(max_values, var_values))
                     term.exp_()
-                    term.mul_(C_lookup_info.lookup(C, var_values))
+                    term.mul_(output_lookup_info.lookup(C, var_values))
                     yield sum_block(term, reduce_info.reduced_dims)
 
             arg_grad = reduce_in_place(add_in_place, generate_terms())

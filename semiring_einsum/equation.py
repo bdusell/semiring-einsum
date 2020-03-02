@@ -56,10 +56,9 @@ class Equation:
             self.reduce_all_to_input = []
             inputs = self.input_variables + [self.output_variables]
             for input_var_list in self.input_variables:
-                reduce_info = create_reduce_info(
-                    inputs, input_var_list)
-                C_lookup_info = reduce_info.lookup_info.pop()
-                self.reduce_all_to_input.append((reduce_info, C_lookup_info))
+                reduce_info = create_reduce_info(inputs, input_var_list)
+                output_lookup_info = reduce_info.lookup_info.pop()
+                self.reduce_all_to_input.append((reduce_info, output_lookup_info))
 
 def compile_equation(equation: str) -> Equation:
     r"""Pre-compile an einsum equation for use with the einsum functions in

@@ -2,7 +2,14 @@ import torch
 
 from .equation import Equation
 from .extend import semiring_einsum_forward
-from .utils import max_in_place, max_block, add_in_place, sum_block
+from .utils import (
+    max_in_place,
+    max_block,
+    add_in_place,
+    sum_block,
+    clip_max_values,
+    resize_max_values
+)
 
 def log_einsum_forward(
         equation: Equation,
@@ -19,19 +26,14 @@ def log_einsum_forward(
     :return: Output of einsum.
     """
     def callback(compute_sum):
-        num_reduced_vars = len(equation.reduce_input_to_output.reduced_variables)
         # Make an initial pass to compute the maximum terms.
         # max_values has the same size as the reduced variables.
+        # TODO Add an option to save max_values for the backward pass.
         max_values = compute_sum(max_in_place, max_block, add_in_place)
-        # Resize max_values so it can broadcast with the shape
-        # output_vars + reduced_vars.
-        resized_max_values = max_values.view(
-            list(max_values.size()) + [1] * num_reduced_vars)
-
-        # Clipping to `min_float` fixes an edge case where all terms are -inf
-        # (the problem is that (-inf - -inf) produces nan).
-        min_float = max_values.new_tensor(torch.finfo(max_values.dtype).min)
-        max_in_place(max_values, min_float)
+        clip_max_values(max_values)
+        resized_max_values = resize_max_values(
+            max_values,
+            len(equation.reduce_input_to_output.reduced_variables))
 
         def sumexpsub_block(a, dims):
             a.sub_(resized_max_values)
