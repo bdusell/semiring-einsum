@@ -5,7 +5,7 @@ import json
 
 import torch
 
-from semiring_einsum import compile_equation, einsum
+from torch_semiring_einsum import compile_equation, einsum
 
 def main():
 

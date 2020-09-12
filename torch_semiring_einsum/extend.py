@@ -24,16 +24,20 @@ def semiring_einsum_forward(
     Note that this function only implements the *forward* aspect of einsum and
     is not differentiable. To turn it into a differentiable PyTorch
     :py:class:`~torch.autograd.Function`, implement its derivative and use
-    :py:func:`~semiring_einsum.combine` to combine the forward and backward
+    :py:func:`~torch_semiring_einsum.combine` to combine the forward and backward
     functions into one function.
 
-    The signature of ``func`` is ``func(compute_sum)``, where
-    ``compute_sum`` is a function that, when called, runs einsum on the inputs
-    with the given addition and multiplication operators.
-    :py:func:`semiring_einsum_forward` returns the return value of ``func``.
+    :py:func:`~semiring_einsum_forward` will call ``func`` as
+    ``func(compute_sum)``, where ``compute_sum`` is itself another function.
+    Calling ``compute_sum`` executes a single einsum pass over the input
+    tensors, where you supply custom functions for addition and
+    multiplication; this is where the semiring customization really takes
+    place. :py:func:`~semiring_einsum_forward` returns whatever you return from
+    ``func``, which will usually be what is returned from ``compute_sum``.
     ``func`` will often consist of a single call to ``compute_sum()``, but
     there are cases where multiple passes over the inputs with different
-    semirings is useful (e.g. computing maximum values and then using them
+    semirings is useful (e.g. for a numerically stable logsumexp
+    implementation, one must first compute maximum values and then use them
     for a subsequent logsumexp step).
 
     Here is a quick example that implements the equivalent of
@@ -57,15 +61,15 @@ def semiring_einsum_forward(
                 return compute_sum(add_in_place, sum_block, multiply_in_place)
             return semiring_einsum_forward(equation, args, block_size, func)
 
-    The signature of ``compute_sum`` is
+    The full signature of ``compute_sum`` is
     ``compute_sum(add_in_place, sum_block, multiply_in_place,
     include_indexes=False)``.
     The ``+`` and ``*`` operators are customized using ``add_in_place``,
     ``sum_block``, and ``multiply_in_place``.
 
-    ``add_in_place(a, b)`` should be a function that accepts two
+    ``add_in_place(a, b)`` must be a function that accepts two
     values and implements ``a += b`` for the desired definition of ``+``.
-    Likewise, ``multiply_in_place(a, b)`` should implement ``a *= b`` for the
+    Likewise, ``multiply_in_place(a, b)`` must implement ``a *= b`` for the
     desired definition of ``*``. The arguments ``a`` and ``b`` are values
     returned from ``sum_block`` (see below) and are usually of type
     :py:class:`~torch.Tensor`, although they can be something fancier for
@@ -78,24 +82,26 @@ def semiring_einsum_forward(
     a :py:class:`~torch.Tensor`. ``dims`` is a :py:class:`tuple` of
     :py:class`int`\ s representing the dimensions in ``a`` to sum out. Take
     special care to handle the case where ``dims`` is an empty tuple --
-    in particular, keep in mind that :py:func:`~torch.sum` returns a *scalar*
+    in particular, keep in mind that :py:func:`torch.sum` returns a *scalar*
     when ``dims`` is an empty tuple. Simply returning ``a`` is sufficient to
-    handle this edge case.
+    handle this edge case. It is safe to return a view of ``a``, since ``a``
+    is itself never a view of the input tensors, but always a new tensor.
 
     If ``include_indexes`` is ``True``, then ``sum_block`` will receive a
-    third argument ``var_values`` which contains the current values of the
-    variables being summed over (``sum_block`` is called multiple times on
-    different windows of the inputs). ``var_values`` is a :py:class:`tuple`
-    of :py:class:`range` objects representing the *ranges* of variable values
-    representing the current window. ``var_values`` contains an entry for each
-    summed variable, in order of first appearance in the equation.
+    third argument ``var_values`` which contains the current indexes of the
+    parts of the input tensors being summed over (``sum_block`` is called
+    multiple times on different windows of the inputs). ``var_values`` is a
+    :py:class:`tuple` of :py:class:`range` objects representing the *ranges*
+    of indexes representing the current window. ``var_values`` contains an
+    entry for each summed variable, in order of first appearance in the
+    equation.
 
     :param equation: A pre-compiled equation.
     :param args: A list of input tensors.
     :param block_size: To keep memory usage in check, the einsum summation is
         done over multiple "windows" or "blocks" of bounded size. This
         parameter sets the maximum size of these windows. More precisely, it
-        defines the maximum breadth of the range of values of each summed
+        defines the maximum size of the range of values of each summed
         variable that is included in a single window. If there are ``n``
         summed variables, the size of the window tensor is proportional to
         ``block_size ** n``.

@@ -12,9 +12,9 @@ def combine(
     memory efficiency than would otherwise be possible.
 
     :param forward: The forward implementation.
-    :param backward: The backward implementation. Its signature should be
+    :param backward: The backward implementation. Its signature must be
         ``backward(equation, args, needs_grad, grad, block_size)``, and it
-        should return a :py:class:`tuple` of :py:class:`~torch.Tensor`
+        must return a :py:class:`tuple` of :py:class:`~torch.Tensor`
         containing the gradients with respect to ``args``. The :math:`i`\ th
         gradient may be ``None`` if ``needs_grad[i]`` is ``False``.
     :return: A function whose return value is compatible with PyTorch's

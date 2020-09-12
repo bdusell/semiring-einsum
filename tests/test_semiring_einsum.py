@@ -4,7 +4,7 @@ import unittest
 import numpy
 import torch
 
-from semiring_einsum import (
+from torch_semiring_einsum import (
     compile_equation,
     real_einsum_forward,
     real_einsum_backward,

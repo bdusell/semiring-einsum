@@ -3,7 +3,7 @@ import unittest
 import torch
 import numpy
 
-from semiring_einsum import (
+from torch_semiring_einsum import (
     compile_equation,
     log_einsum_backward)
 

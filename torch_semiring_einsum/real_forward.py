@@ -16,7 +16,8 @@ def real_einsum_forward(
 
     In some cases, when dealing with summations over more than two input
     tensors at once, this implementation can have better space complexity than
-    :py:func:`torch.einsum`.
+    :py:func:`torch.einsum`, because it does not create intermediate tensors
+    whose sizes are proportional to the dimensions being summed over.
 
     :param equation: A pre-compiled equation.
     :param args: Input tensors. The number of input tensors must be compatible

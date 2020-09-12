@@ -1,18 +1,30 @@
-Semiring Einsum
-===============
+Semiring Einsum (`torch_semiring_einsum`)
+=========================================
 
 `View on GitHub <https://github.com/bdusell/semiring-einsum>`_
 
-This is a Python package for PyTorch that implements einsum for alternative
-semirings besides the usual "add-multiply" semiring, namely logspace and Viterbi.
-It can be extended to support additional semirings relatively easily.
+This is a
+`PyTorch <https://pytorch.org/>`_
+re-implementation of
+`einsum <https://pytorch.org/docs/master/generated/torch.einsum.html>`_
+that supports multiple
+`semirings <https://en.wikipedia.org/wiki/Semiring>`_
+in addition to the usual real semiring, including the log and Viterbi
+semirings. It can be extended to support additional semirings.
 
-The einsum implementation in this package was also specifically designed
-to be memory-efficient. Whereas a naive implementation of einsum could easily
-consume huge amounts of memory, this implementation uses no more memory than
-necessary by performing summations in-place, at the cost of some parallelism.
-In some cases, it uses even less memory than the built-in :py:func:`torch.einsum`
-function.
+This einsum implementation was specifically designed to be memory-efficient.
+Whereas a naive implementation of einsum could easily consume huge amounts of
+memory, this implementation has a very conservative memory footprint. It
+performs summations in-place and in fixed-size blocks in order to force an
+upper bound on memory usage, at the cost of some parallelism. However, the
+percentage of memory saved is typically much greater than the percentage of
+speed lost. This einsum implementation allows you to set the block size and
+tune the tradeoff between memory and speed.
+
+In some cases, this einsum implementation has even better space complexity
+than the built-in :py:func:`torch.einsum` function, because it does not need
+to create intermediate tensors whose sizes are proportional to the dimensions
+being summed over.
 
 .. toctree::
    :maxdepth: 2
@@ -25,6 +37,12 @@ Installation
 
 .. code-block:: sh
 
+   pip install torch_semiring_einsum
+
+Or to install directly from GitHub:
+
+.. code-block:: sh
+
    pip install git+git://github.com/bdusell/semiring-einsum.git
 
 Basic Usage
@@ -32,22 +50,22 @@ Basic Usage
 
 .. code-block:: python
 
-   import semiring_einsum
+   import torch_semiring_einsum
 
-   EQUATION = semiring_einsum.compile_equation('ik,kj->ij')
+   EQUATION = torch_semiring_einsum.compile_equation('ik,kj->ij')
 
    A = torch.log(torch.rand(3, 5))
    B = torch.log(torch.rand(5, 7))
-   C = semiring_einsum.logspace_einsum(EQUATION, A, B)
+   C = torch_semiring_einsum.logspace_einsum(EQUATION, A, B)
 
 Note that unlike in NumPy or PyTorch, equations are pre-compiled using
-:py:func:`~semiring_einsum.compile_equation` rather than re-parsed from
+:py:func:`~torch_semiring_einsum.compile_equation` rather than re-parsed from
 scratch every time einsum is called.
 
 API Documentation
 -----------------
 
-See :doc:`api`.
+For full, detailed API documentation, see :doc:`api`.
 
 What is Einsum?
 ---------------
@@ -109,14 +127,16 @@ Space Complexity
 
 Consider the einsum equation ``'ak,ak,ak->a'``, where :math:`A` is the size of
 the ``a`` dimension and :math:`K` is the size of the ``k`` dimension.
-Implementations of einsum in NumPy and PyTorch contract two tensors at time,
+Implementations of einsum in NumPy and PyTorch contract two tensors at a time,
 which means that they must create an intermediate tensor of size
 :math:`A \times K`. There is even a routine in NumPy,
 :py:func:`numpy.einsum_path`, which figures out the best contraction order.
 However, it should, in principle, be possible to avoid this by summing over
-all tensors at the same time. This is exactly what ``semiring_einsum`` does,
+all tensors at the same time. This is exactly what ``torch_semiring_einsum`` does,
 and as a result the amount of scratch space the forward pass of einsum requires
 remains fixed as a function of :math:`K`:
+
+TODO Talk about block size.
 
 .. image:: space-complexity.png
 

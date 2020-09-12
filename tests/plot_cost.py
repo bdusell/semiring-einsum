@@ -36,8 +36,8 @@ def main():
     ylabel = 'GPU memory (bytes)' if args.type == 'space' else 'Time (s)'
     ax.set_ylabel(ylabel)
 
-    ax.plot(pytorch_x, pytorch_y, label='pytorch.einsum()')
-    ax.plot(this_x, this_y, label='semiring_einsum.einsum()')
+    ax.plot(pytorch_x, pytorch_y, label='torch.einsum()')
+    ax.plot(this_x, this_y, label='torch_semiring_einsum.einsum()')
     ax.set_ylim(bottom=0)
 
     ax.legend()

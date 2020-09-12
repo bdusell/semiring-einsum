@@ -13,14 +13,13 @@ def real_einsum_backward(
         grad: torch.Tensor,
         block_size: int) -> typing.List[typing.Optional[torch.Tensor]]:
     r"""Compute the derivative of
-    :py:func:`~semiring_einsum.real_einsum_forward`.
+    :py:func:`~torch_semiring_einsum.real_einsum_forward`.
 
     Like the forward pass, the backward pass is done in memory-efficient
-    fashion by doing summations in-place.
+    fashion by doing summations in fixed-size chunks.
 
     :param equation: Pre-compiled einsum equation. The derivative of the
         einsum operation specified by this equation will be computed.
-        The equation must have been compiled with ``backward=True``.
     :param args: The inputs to the einsum operation whose derivative
         is being computed.
     :param needs_grad: Indicates which inputs in ``args`` require gradient.

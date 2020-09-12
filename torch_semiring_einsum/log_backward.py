@@ -21,7 +21,7 @@ def log_einsum_backward(
         grad: torch.Tensor,
         block_size: int) -> typing.List[typing.Optional[torch.Tensor]]:
     r"""Compute the derivative of
-    :py:func:`~semiring_einsum.log_einsum_forward`.
+    :py:func:`~torch_semiring_einsum.log_einsum_forward`.
 
     Like the forward pass, the backward pass is done in memory-efficient
     fashion by doing summations in fixed-size chunks.
