@@ -63,3 +63,4 @@ intersphinx_mapping = {
 }
 
 html_logo = 'logo.svg'
+html_favicon = 'logo.svg'
