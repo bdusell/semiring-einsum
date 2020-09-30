@@ -1,5 +1,5 @@
-Semiring Einsum (`torch_semiring_einsum`)
-=========================================
+Semiring Einsum (``torch_semiring_einsum``)
+===========================================
 
 `View on GitHub <https://github.com/bdusell/semiring-einsum>`_
 

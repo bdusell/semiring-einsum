@@ -61,3 +61,5 @@ intersphinx_mapping = {
     'numpy' : ('https://docs.scipy.org/doc/numpy', None),
     'pytorch' : ('https://pytorch.org/docs/stable', None)
 }
+
+html_logo = 'logo.svg'
