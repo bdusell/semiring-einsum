@@ -5,6 +5,7 @@ description = "Extensible PyTorch implementation of einsum that supports multipl
 authors = ["Brian DuSell"]
 license = "MIT"
 repository = "https://github.com/bdusell/semiring-einsum"
+homepage = "https://bdusell.github.io/semiring-einsum/"
 
 [tool.poetry.dependencies]
 python = "^3.7"
