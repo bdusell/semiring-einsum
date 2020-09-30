@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>Semiring Einsum &#8212; Semiring Einsum  documentation</title>
+    <title>Semiring Einsum (torch_semiring_einsum) &#8212; Semiring Einsum  documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -15,7 +15,7 @@
     <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="API" href="api.html" />
+    <link rel="next" title="API for torch_semiring_einsum" href="api.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -32,48 +32,81 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="semiring-einsum">
-<h1>Semiring Einsum<a class="headerlink" href="#semiring-einsum" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="semiring-einsum-torch-semiring-einsum">
+<h1>Semiring Einsum (<code class="docutils literal notranslate"><span class="pre">torch_semiring_einsum</span></code>)<a class="headerlink" href="#semiring-einsum-torch-semiring-einsum" title="Permalink to this headline">¶</a></h1>
 <p><a class="reference external" href="https://github.com/bdusell/semiring-einsum">View on GitHub</a></p>
-<p>This is a Python package for PyTorch that implements einsum for alternative
-semirings besides the usual “add-multiply” semiring, namely logspace and Viterbi.
-It can be extended to support additional semirings relatively easily.</p>
-<p>The einsum implementation in this package was also specifically designed
-to be memory-efficient. Whereas a naive implementation of einsum could easily
-consume huge amounts of memory, this implementation uses no more memory than
-necessary by performing summations in-place, at the cost of some parallelism.
-In some cases, it uses even less memory than the built-in <a class="reference external" href="https://pytorch.org/docs/stable/torch.html#torch.einsum" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a>
-function.</p>
+<p>This is a
+<a class="reference external" href="https://pytorch.org/">PyTorch</a>
+re-implementation of
+<a class="reference external" href="https://pytorch.org/docs/master/generated/torch.einsum.html">einsum</a>
+that supports multiple
+<a class="reference external" href="https://en.wikipedia.org/wiki/Semiring">semirings</a>.
+It includes implementations for the real, log, and Viterbi semirings out of
+the box and can be extended to support additional semirings. It can also offer
+better performance than the built-in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a> function and
+makes the memory-execution time tradeoff configurable, allowing you to run
+large einsum operations that might otherwise be impossible given standard
+hardware constraints.</p>
+<p>This einsum implementation was specifically designed to be memory-efficient.
+Whereas a naive implementation of einsum could easily consume huge amounts of
+memory, this implementation has a very conservative memory footprint. It
+performs summations in-place and in fixed-size blocks in order to force an
+upper bound on memory usage, at the cost of some parallelism. However, the
+percentage of memory saved is typically much greater than the percentage of
+speed lost. This einsum implementation allows you to set the block size and
+tune the tradeoff between memory and speed.</p>
+<p>In some cases, this einsum implementation has even better space complexity
+than the built-in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a> function, because it does not need
+to create intermediate tensors whose sizes are proportional to the dimensions
+being summed over.</p>
 <div class="toctree-wrapper compound">
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API for <code class="docutils literal notranslate"><span class="pre">torch_semiring_einsum</span></code></a></li>
 </ul>
 </div>
 <div class="section" id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>You can install <code class="docutils literal notranslate"><span class="pre">torch_semiring_einsum</span></code> from PyPI using <code class="docutils literal notranslate"><span class="pre">pip</span></code>:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip install torch_semiring_einsum
+</pre></div>
+</div>
+<p>or a package manager like <a class="reference external" href="https://python-poetry.org/">Poetry</a>:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>poetry add torch_semiring_einsum
+</pre></div>
+</div>
+<p>You can also install it directly from GitHub:</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip install git+git://github.com/bdusell/semiring-einsum.git
+</pre></div>
+</div>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>poetry add git+https://github.com/bdusell/semiring-einsum@master
 </pre></div>
 </div>
 </div>
 <div class="section" id="basic-usage">
 <h2>Basic Usage<a class="headerlink" href="#basic-usage" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">semiring_einsum</span>
+<p>Here is a quick example that implements batched matrix multiplication in log
+space:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_semiring_einsum</span>
 
-<span class="n">EQUATION</span> <span class="o">=</span> <span class="n">semiring_einsum</span><span class="o">.</span><span class="n">compile_equation</span><span class="p">(</span><span class="s1">&#39;ik,kj-&gt;ij&#39;</span><span class="p">)</span>
-
-<span class="n">A</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
-<span class="n">B</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
-<span class="n">C</span> <span class="o">=</span> <span class="n">semiring_einsum</span><span class="o">.</span><span class="n">logspace_einsum</span><span class="p">(</span><span class="n">EQUATION</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">)</span>
+<span class="c1"># Pre-compile an einsum equation.</span>
+<span class="n">EQUATION</span> <span class="o">=</span> <span class="n">torch_semiring_einsum</span><span class="o">.</span><span class="n">compile_equation</span><span class="p">(</span><span class="s1">&#39;bik,bkj-&gt;bij&#39;</span><span class="p">)</span>
+<span class="c1"># Create some parameters to multiply.</span>
+<span class="n">A</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="n">B</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="c1"># Run einsum.</span>
+<span class="n">C</span> <span class="o">=</span> <span class="n">torch_semiring_einsum</span><span class="o">.</span><span class="n">log_einsum</span><span class="p">(</span><span class="n">EQUATION</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">)</span>
+<span class="c1"># Now C is differentiable.</span>
+<span class="n">C</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
 </pre></div>
 </div>
 <p>Note that unlike in NumPy or PyTorch, equations are pre-compiled using
-<a class="reference internal" href="api.html#semiring_einsum.compile_equation" title="semiring_einsum.compile_equation"><code class="xref py py-func docutils literal notranslate"><span class="pre">compile_equation()</span></code></a> rather than re-parsed from
+<a class="reference internal" href="api.html#torch_semiring_einsum.compile_equation" title="torch_semiring_einsum.compile_equation"><code class="xref py py-func docutils literal notranslate"><span class="pre">compile_equation()</span></code></a> rather than re-parsed from
 scratch every time einsum is called.</p>
 </div>
 <div class="section" id="api-documentation">
 <h2>API Documentation<a class="headerlink" href="#api-documentation" title="Permalink to this headline">¶</a></h2>
-<p>See <a class="reference internal" href="api.html"><span class="doc">API</span></a>.</p>
+<p>For full, detailed API documentation, see <a class="reference internal" href="api.html"><span class="doc">API for torch_semiring_einsum</span></a>.</p>
 </div>
 <div class="section" id="what-is-einsum">
 <h2>What is Einsum?<a class="headerlink" href="#what-is-einsum" title="Permalink to this headline">¶</a></h2>
@@ -104,8 +137,8 @@ multiplying elements from <code class="docutils literal notranslate"><span class
 \[C_{ij} = \sum_k A_{ik} \times B_{kj}\]</div>
 <p>Einsum can also be used with three or more tensor arguments.</p>
 </div>
-<div class="section" id="semirings">
-<h2>Semirings<a class="headerlink" href="#semirings" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id2">
+<h2>Semirings<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
 <p>It is often useful to swap out addition and multiplication for different
 operators that have the same algebraic properties as addition and
 multiplication do on real numbers. We can express this using
@@ -116,28 +149,61 @@ and the <a class="reference external" href="https://en.wikipedia.org/wiki/Forwar
 on Hidden Markov Models can be viewed as instances of the same algorithm
 instantiated with different semirings.</p>
 <p>For a formal definition of semirings and an introduction to semirings in the
-context of context-free grammar parsing, see <a class="bibtex reference internal" href="#goodman1999" id="id2">[Goo99]</a>.</p>
+context of context-free grammar parsing, see <a class="bibtex reference internal" href="#goodman1999" id="id4">[Goo99]</a>.</p>
 </div>
 <div class="section" id="einsum-syntax">
 <h2>Einsum Syntax<a class="headerlink" href="#einsum-syntax" title="Permalink to this headline">¶</a></h2>
 <p>This package supports the same einsum equation syntax as
-<a class="reference external" href="https://pytorch.org/docs/stable/torch.html#torch.einsum" title="(in PyTorch vmaster (1.3.0a0+ee77ccb ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a>, except it does not support ellipses (<code class="docutils literal notranslate"><span class="pre">...</span></code>) syntax.</p>
+<a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a>, except it does not support ellipses (<code class="docutils literal notranslate"><span class="pre">...</span></code>) syntax.</p>
 </div>
-<div class="section" id="space-complexity">
-<h2>Space Complexity<a class="headerlink" href="#space-complexity" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="time-and-space-complexity">
+<h2>Time and Space Complexity<a class="headerlink" href="#time-and-space-complexity" title="Permalink to this headline">¶</a></h2>
 <p>Consider the einsum equation <code class="docutils literal notranslate"><span class="pre">'ak,ak,ak-&gt;a'</span></code>, where <span class="math notranslate nohighlight">\(A\)</span> is the size of
 the <code class="docutils literal notranslate"><span class="pre">a</span></code> dimension and <span class="math notranslate nohighlight">\(K\)</span> is the size of the <code class="docutils literal notranslate"><span class="pre">k</span></code> dimension.
-Implementations of einsum in NumPy and PyTorch contract two tensors at time,
-which means that they must create an intermediate tensor of size
-<span class="math notranslate nohighlight">\(A \times K\)</span>. There is even a routine in NumPy,
-<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.einsum_path.html#numpy.einsum_path" title="(in NumPy v1.17)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.einsum_path()</span></code></a>, which figures out the best contraction order.
+Implementations of einsum in NumPy and PyTorch would compute this by
+contracting two tensors at a time, performing two separate tensor
+multiplications. This means that they must create an intermediate tensor of
+size <span class="math notranslate nohighlight">\(A \times K\)</span>. There is even a routine in NumPy,
+<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.einsum_path.html#numpy.einsum_path" title="(in NumPy v1.19)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.einsum_path()</span></code></a>, which figures out the best contraction order.
 However, it should, in principle, be possible to avoid this by summing over
-all tensors at the same time. This is exactly what <code class="docutils literal notranslate"><span class="pre">semiring_einsum</span></code> does,
+all tensors at the same time. This is exactly what <code class="docutils literal notranslate"><span class="pre">torch_semiring_einsum</span></code> does,
 and as a result the amount of scratch space the forward pass of einsum requires
 remains fixed as a function of <span class="math notranslate nohighlight">\(K\)</span>:</p>
-<img alt="_images/space-complexity.png" src="_images/space-complexity.png" />
-<p>It does, however, come at a cost in time:</p>
+<p>In addition to performing the summations in the forward and backward passes
+in-place, this package implements another important innovation: performing
+summations in <em>blocks</em> of <em>fixed size</em>. Crucially, this allows you to strike a
+<em>balance</em> between time and memory usage, allowing you to perform einsum
+operations that might otherwise be impossible given typical time and GPU memory
+constraints.</p>
+<p>The fixed-block method is a compromise between two extremes: (a) performing the
+summation in-place by iterating over every value of <code class="docutils literal notranslate"><span class="pre">k</span></code> one-by-one, and (b)
+performing the summation entirely out-of-place by creating an intermediate
+tensor with a new <code class="docutils literal notranslate"><span class="pre">k</span></code> dimension of size <span class="math notranslate nohighlight">\(K\)</span>, then summing over <code class="docutils literal notranslate"><span class="pre">k</span></code> in
+one GPU kernel call. Method (a) is unbearably slow, and method (b) can use
+exorbitant amounts of memory that make it impossible to use. The fixed-block
+method is like method (a), except that it iterates over fixed-size <em>ranges</em> of
+<code class="docutils literal notranslate"><span class="pre">k</span></code>. This increases the parallelism and memory requirements of the summation
+calculation and decreases the number of GPU kernels launched. Smaller blocks
+make einsum behave more like (a), and larger blocks make it behave more like
+(b). But in all cases, the fixed block size ensures that the memory
+requirements never scale with <span class="math notranslate nohighlight">\(K\)</span>, so the space complexity for our
+example would remain <span class="math notranslate nohighlight">\(O(A)\)</span> instead of <span class="math notranslate nohighlight">\(O(AK)\)</span>.</p>
+<p>These plots show how the space and time complexity of <code class="docutils literal notranslate"><span class="pre">einsum('ak,ak,ak-&gt;a')</span></code>
+(using the real semiring) varies with block size and <span class="math notranslate nohighlight">\(K\)</span>, the size of
+dimension <code class="docutils literal notranslate"><span class="pre">k</span></code>:</p>
 <img alt="_images/time-complexity.png" src="_images/time-complexity.png" />
+<img alt="_images/time-complexity-2.png" src="_images/time-complexity-2.png" />
+<p>As we can see, execution time gets dramatically better even with small
+increases in block size. The built-in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a> function is still
+much faster than the blocked versions, but when the block size is unbounded
+and the summation is fully parallel, it is even faster.</p>
+<img alt="_images/space-complexity.png" src="_images/space-complexity.png" />
+<img alt="_images/space-complexity-2.png" src="_images/space-complexity-2.png" />
+<p>For our example, the built-in einsum implementation uses the same amount of
+memory as the fully out-of-place einsum (this is true for this specific
+equation, but it does not generally hold true for all equations). Crucially,
+the blocked einsum implementation has constant, rather than linear, space
+complexity, opening up a new world of possible einsum operations.</p>
 </div>
 <div class="section" id="indexes">
 <h2>Indexes<a class="headerlink" href="#indexes" title="Permalink to this headline">¶</a></h2>
@@ -150,7 +216,7 @@ remains fixed as a function of <span class="math notranslate nohighlight">\(K\)<
 <div class="section" id="bibliography">
 <h2>Bibliography<a class="headerlink" href="#bibliography" title="Permalink to this headline">¶</a></h2>
 <p id="bibtex-bibliography-index-0"><dl class="citation">
-<dt class="bibtex label" id="goodman1999"><span class="brackets"><a class="fn-backref" href="#id2">Goo99</a></span></dt>
+<dt class="bibtex label" id="goodman1999"><span class="brackets"><a class="fn-backref" href="#id4">Goo99</a></span></dt>
 <dd><p>Joshua Goodman. Semiring parsing. <em>Computational Linguistics</em>, 25(4):573–605, 1999.</p>
 </dd>
 </dl>
@@ -165,6 +231,9 @@ remains fixed as a function of <span class="math notranslate nohighlight">\(K\)<
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="#">
+              <img class="logo" src="_static/logo.svg" alt="Logo"/>
+            </a></p>
 <h1 class="logo"><a href="#">Semiring Einsum</a></h1>
 
 
@@ -177,14 +246,14 @@ remains fixed as a function of <span class="math notranslate nohighlight">\(K\)<
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API for <code class="docutils literal notranslate"><span class="pre">torch_semiring_einsum</span></code></a></li>
 </ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="#">Documentation overview</a><ul>
-      <li>Next: <a href="api.html" title="next chapter">API</a></li>
+      <li>Next: <a href="api.html" title="next chapter">API for <code class="docutils literal notranslate"><span class="pre">torch_semiring_einsum</span></code></a></li>
   </ul></li>
 </ul>
 </div>
