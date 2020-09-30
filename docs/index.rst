@@ -8,9 +8,13 @@ This is a
 re-implementation of
 `einsum <https://pytorch.org/docs/master/generated/torch.einsum.html>`_
 that supports multiple
-`semirings <https://en.wikipedia.org/wiki/Semiring>`_
-in addition to the usual real semiring, including the log and Viterbi
-semirings. It can be extended to support additional semirings.
+`semirings <https://en.wikipedia.org/wiki/Semiring>`_.
+It includes implementations for the real, log, and Viterbi semirings out of
+the box and can be extended to support additional semirings. It can also offer
+better performance than the built-in :py:func:`torch.einsum` function and
+makes the memory-execution time tradeoff configurable, allowing you to run
+large einsum operations that might otherwise be impossible given standard
+hardware constraints.
 
 This einsum implementation was specifically designed to be memory-efficient.
 Whereas a naive implementation of einsum could easily consume huge amounts of
@@ -35,28 +39,47 @@ being summed over.
 Installation
 ------------
 
+You can install ``torch_semiring_einsum`` from PyPI using ``pip``:
+
 .. code-block:: sh
 
    pip install torch_semiring_einsum
 
-Or to install directly from GitHub:
+or a package manager like `Poetry <https://python-poetry.org/>`_:
+
+.. code-block:: sh
+
+   poetry add torch_semiring_einsum
+
+You can also install it directly from GitHub:
 
 .. code-block:: sh
 
    pip install git+git://github.com/bdusell/semiring-einsum.git
 
+.. code-block:: sh
+
+   poetry add git+https://github.com/bdusell/semiring-einsum@master
+
 Basic Usage
 -----------
+
+Here is a quick example that implements batched matrix multiplication in log
+space:
 
 .. code-block:: python
 
    import torch_semiring_einsum
 
-   EQUATION = torch_semiring_einsum.compile_equation('ik,kj->ij')
-
-   A = torch.log(torch.rand(3, 5))
-   B = torch.log(torch.rand(5, 7))
-   C = torch_semiring_einsum.logspace_einsum(EQUATION, A, B)
+   # Pre-compile an einsum equation.
+   EQUATION = torch_semiring_einsum.compile_equation('bik,bkj->bij')
+   # Create some parameters to multiply.
+   A = torch.log(torch.rand(10, 3, 5, requires_grad=True))
+   B = torch.log(torch.rand(10, 5, 7, requires_grad=True))
+   # Run einsum.
+   C = torch_semiring_einsum.log_einsum(EQUATION, A, B)
+   # Now C is differentiable.
+   C.sum().backward()
 
 Note that unlike in NumPy or PyTorch, equations are pre-compiled using
 :py:func:`~torch_semiring_einsum.compile_equation` rather than re-parsed from
@@ -122,27 +145,64 @@ Einsum Syntax
 This package supports the same einsum equation syntax as
 :py:func:`torch.einsum`, except it does not support ellipses (``...``) syntax.
 
-Space Complexity
-----------------
+Time and Space Complexity
+-------------------------
 
 Consider the einsum equation ``'ak,ak,ak->a'``, where :math:`A` is the size of
 the ``a`` dimension and :math:`K` is the size of the ``k`` dimension.
-Implementations of einsum in NumPy and PyTorch contract two tensors at a time,
-which means that they must create an intermediate tensor of size
-:math:`A \times K`. There is even a routine in NumPy,
+Implementations of einsum in NumPy and PyTorch would compute this by
+contracting two tensors at a time, performing two separate tensor
+multiplications. This means that they must create an intermediate tensor of
+size :math:`A \times K`. There is even a routine in NumPy,
 :py:func:`numpy.einsum_path`, which figures out the best contraction order.
 However, it should, in principle, be possible to avoid this by summing over
 all tensors at the same time. This is exactly what ``torch_semiring_einsum`` does,
 and as a result the amount of scratch space the forward pass of einsum requires
 remains fixed as a function of :math:`K`:
 
-TODO Talk about block size.
+In addition to performing the summations in the forward and backward passes
+in-place, this package implements another important innovation: performing
+summations in *blocks* of *fixed size*. Crucially, this allows you to strike a
+*balance* between time and memory usage, allowing you to perform einsum
+operations that might otherwise be impossible given typical time and GPU memory
+constraints.
+
+The fixed-block method is a compromise between two extremes: (a) performing the
+summation in-place by iterating over every value of ``k`` one-by-one, and (b)
+performing the summation entirely out-of-place by creating an intermediate
+tensor with a new ``k`` dimension of size :math:`K`, then summing over ``k`` in
+one GPU kernel call. Method (a) is unbearably slow, and method (b) can use
+exorbitant amounts of memory that make it impossible to use. The fixed-block
+method is like method (a), except that it iterates over fixed-size *ranges* of
+``k``. This increases the parallelism and memory requirements of the summation
+calculation and decreases the number of GPU kernels launched. Smaller blocks
+make einsum behave more like (a), and larger blocks make it behave more like
+(b). But in all cases, the fixed block size ensures that the memory
+requirements never scale with :math:`K`, so the space complexity for our
+example would remain :math:`O(A)` instead of :math:`O(AK)`.
+
+These plots show how the space and time complexity of ``einsum('ak,ak,ak->a')``
+(using the real semiring) varies with block size and :math:`K`, the size of
+dimension ``k``:
+
+.. image:: time-complexity.png
+
+.. image:: time-complexity-2.png
+
+As we can see, execution time gets dramatically better even with small
+increases in block size. The built-in :py:func:`torch.einsum` function is still
+much faster than the blocked versions, but when the block size is unbounded
+and the summation is fully parallel, it is even faster.
 
 .. image:: space-complexity.png
 
-It does, however, come at a cost in time:
+.. image:: space-complexity-2.png
 
-.. image:: time-complexity.png
+For our example, the built-in einsum implementation uses the same amount of
+memory as the fully out-of-place einsum (this is true for this specific
+equation, but it does not generally hold true for all equations). Crucially,
+the blocked einsum implementation has constant, rather than linear, space
+complexity, opening up a new world of possible einsum operations.
 
 Indexes
 -------
