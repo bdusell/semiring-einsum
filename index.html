@@ -46,7 +46,7 @@ It includes implementations for the real, log, and Viterbi semirings out of
 the box and can be extended to support additional semirings. It can also offer
 better performance than the built-in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a> function and
 makes the memory-execution time tradeoff configurable, allowing you to run
-large einsum operations that might otherwise be impossible given standard
+large einsum operations that might otherwise be impossible given typical
 hardware constraints.</p>
 <p>This einsum implementation was specifically designed to be memory-efficient.
 Whereas a naive implementation of einsum could easily consume huge amounts of
@@ -88,7 +88,8 @@ being summed over.</p>
 <h2>Basic Usage<a class="headerlink" href="#basic-usage" title="Permalink to this headline">¶</a></h2>
 <p>Here is a quick example that implements batched matrix multiplication in log
 space:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_semiring_einsum</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch_semiring_einsum</span>
 
 <span class="c1"># Pre-compile an einsum equation.</span>
 <span class="n">EQUATION</span> <span class="o">=</span> <span class="n">torch_semiring_einsum</span><span class="o">.</span><span class="n">compile_equation</span><span class="p">(</span><span class="s1">&#39;bik,bkj-&gt;bij&#39;</span><span class="p">)</span>
@@ -169,7 +170,7 @@ size <span class="math notranslate nohighlight">\(A \times K\)</span>. There is 
 However, it should, in principle, be possible to avoid this by summing over
 all tensors at the same time. This is exactly what <code class="docutils literal notranslate"><span class="pre">torch_semiring_einsum</span></code> does,
 and as a result the amount of scratch space the forward pass of einsum requires
-remains fixed as a function of <span class="math notranslate nohighlight">\(K\)</span>:</p>
+remains fixed as a function of <span class="math notranslate nohighlight">\(K\)</span>.</p>
 <p>In addition to performing the summations in the forward and backward passes
 in-place, this package implements another important innovation: performing
 summations in <em>blocks</em> of <em>fixed size</em>. Crucially, this allows you to strike a

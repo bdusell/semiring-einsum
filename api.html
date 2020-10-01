@@ -233,10 +233,14 @@ is required for implementing logsumexp). This function is used internally
 by the real, log, and Viterbi semiring einsum implementations in this
 package and can be used to implement einsum in other semirings as well.</p>
 <p>Note that this function only implements the <em>forward</em> aspect of einsum and
-is not differentiable. To turn it into a differentiable PyTorch
+is not differentiable. To turn your instantiation of einsum in a
+particular semiring into a differentiable PyTorch
 <a class="reference external" href="https://pytorch.org/docs/stable/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Function</span></code></a>, implement its derivative and use
-<a class="reference internal" href="#torch_semiring_einsum.combine" title="torch_semiring_einsum.combine"><code class="xref py py-func docutils literal notranslate"><span class="pre">combine()</span></code></a> to combine the forward and backward
-functions into one function.</p>
+<a class="reference internal" href="#torch_semiring_einsum.combine" title="torch_semiring_einsum.combine"><code class="xref py py-func docutils literal notranslate"><span class="pre">combine()</span></code></a> to combine the forward and
+backward functions into one function. Odds are,
+<a class="reference internal" href="#torch_semiring_einsum.semiring_einsum_forward" title="torch_semiring_einsum.semiring_einsum_forward"><code class="xref py py-func docutils literal notranslate"><span class="pre">semiring_einsum_forward()</span></code></a> can be used to implement the derivative
+efficiently as well (despite including “forward” in the name, there is
+nothing preventing you from using it as a tool in the backward step).</p>
 <p><a class="reference internal" href="#torch_semiring_einsum.semiring_einsum_forward" title="torch_semiring_einsum.semiring_einsum_forward"><code class="xref py py-func docutils literal notranslate"><span class="pre">semiring_einsum_forward()</span></code></a> will call <code class="docutils literal notranslate"><span class="pre">func</span></code> as
 <code class="docutils literal notranslate"><span class="pre">func(compute_sum)</span></code>, where <code class="docutils literal notranslate"><span class="pre">compute_sum</span></code> is itself another function.
 Calling <code class="docutils literal notranslate"><span class="pre">compute_sum</span></code> executes a single einsum pass over the input
@@ -285,18 +289,19 @@ is ignored.</p>
 <p><code class="docutils literal notranslate"><span class="pre">sum_block(a,</span> <span class="pre">dims)</span></code> should be a function that “sums” over multiple
 dimensions in a tensor at once. It must return its result. <code class="docutils literal notranslate"><span class="pre">a</span></code> is always
 a <a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>. <code class="docutils literal notranslate"><span class="pre">dims</span></code> is a <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a> of
-:py:class`int`s representing the dimensions in <code class="docutils literal notranslate"><span class="pre">a</span></code> to sum out. Take
+<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>s representing the dimensions in <code class="docutils literal notranslate"><span class="pre">a</span></code> to sum out. Take
 special care to handle the case where <code class="docutils literal notranslate"><span class="pre">dims</span></code> is an empty tuple –
 in particular, keep in mind that <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.sum.html#torch.sum" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.sum()</span></code></a> returns a <em>scalar</em>
 when <code class="docutils literal notranslate"><span class="pre">dims</span></code> is an empty tuple. Simply returning <code class="docutils literal notranslate"><span class="pre">a</span></code> is sufficient to
-handle this edge case. It is safe to return a view of <code class="docutils literal notranslate"><span class="pre">a</span></code>, since <code class="docutils literal notranslate"><span class="pre">a</span></code>
-is itself never a view of the input tensors, but always a new tensor.</p>
+handle this edge case. Note that it is always safe to return a <em>view</em> of
+<code class="docutils literal notranslate"><span class="pre">a</span></code> from <code class="docutils literal notranslate"><span class="pre">sum_block</span></code>, since <code class="docutils literal notranslate"><span class="pre">a</span></code> is itself never a view of the input
+tensors, but always a new tensor.</p>
 <p>If <code class="docutils literal notranslate"><span class="pre">include_indexes</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, then <code class="docutils literal notranslate"><span class="pre">sum_block</span></code> will receive a
-third argument <code class="docutils literal notranslate"><span class="pre">var_values</span></code> which contains the current indexes of the
+third argument, <code class="docutils literal notranslate"><span class="pre">var_values</span></code>, which contains the current indexes of the
 parts of the input tensors being summed over (<code class="docutils literal notranslate"><span class="pre">sum_block</span></code> is called
-multiple times on different windows of the inputs). <code class="docutils literal notranslate"><span class="pre">var_values</span></code> is a
+multiple times on different slices of the inputs). <code class="docutils literal notranslate"><span class="pre">var_values</span></code> is a
 <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a> of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#range" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">range</span></code></a> objects representing the <em>ranges</em>
-of indexes representing the current window. <code class="docutils literal notranslate"><span class="pre">var_values</span></code> contains an
+of indexes representing the current slice. <code class="docutils literal notranslate"><span class="pre">var_values</span></code> contains an
 entry for each summed variable, in order of first appearance in the
 equation.</p>
 <dl class="field-list simple">
