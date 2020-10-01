@@ -13,7 +13,7 @@ It includes implementations for the real, log, and Viterbi semirings out of
 the box and can be extended to support additional semirings. It can also offer
 better performance than the built-in :py:func:`torch.einsum` function and
 makes the memory-execution time tradeoff configurable, allowing you to run
-large einsum operations that might otherwise be impossible given standard
+large einsum operations that might otherwise be impossible given typical
 hardware constraints.
 
 This einsum implementation was specifically designed to be memory-efficient.
@@ -69,6 +69,7 @@ space:
 
 .. code-block:: python
 
+   import torch
    import torch_semiring_einsum
 
    # Pre-compile an einsum equation.
@@ -158,7 +159,7 @@ size :math:`A \times K`. There is even a routine in NumPy,
 However, it should, in principle, be possible to avoid this by summing over
 all tensors at the same time. This is exactly what ``torch_semiring_einsum`` does,
 and as a result the amount of scratch space the forward pass of einsum requires
-remains fixed as a function of :math:`K`:
+remains fixed as a function of :math:`K`.
 
 In addition to performing the summations in the forward and backward passes
 in-place, this package implements another important innovation: performing

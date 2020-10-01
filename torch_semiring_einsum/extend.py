@@ -22,10 +22,14 @@ def semiring_einsum_forward(
     package and can be used to implement einsum in other semirings as well.
 
     Note that this function only implements the *forward* aspect of einsum and
-    is not differentiable. To turn it into a differentiable PyTorch
+    is not differentiable. To turn your instantiation of einsum in a
+    particular semiring into a differentiable PyTorch
     :py:class:`~torch.autograd.Function`, implement its derivative and use
-    :py:func:`~torch_semiring_einsum.combine` to combine the forward and backward
-    functions into one function.
+    :py:func:`~torch_semiring_einsum.combine` to combine the forward and
+    backward functions into one function. Odds are,
+    :py:func:`~semiring_einsum_forward` can be used to implement the derivative
+    efficiently as well (despite including "forward" in the name, there is
+    nothing preventing you from using it as a tool in the backward step).
 
     :py:func:`~semiring_einsum_forward` will call ``func`` as
     ``func(compute_sum)``, where ``compute_sum`` is itself another function.
@@ -80,19 +84,20 @@ def semiring_einsum_forward(
     ``sum_block(a, dims)`` should be a function that "sums" over multiple
     dimensions in a tensor at once. It must return its result. ``a`` is always
     a :py:class:`~torch.Tensor`. ``dims`` is a :py:class:`tuple` of
-    :py:class`int`\ s representing the dimensions in ``a`` to sum out. Take
+    :py:class:`int`\ s representing the dimensions in ``a`` to sum out. Take
     special care to handle the case where ``dims`` is an empty tuple --
     in particular, keep in mind that :py:func:`torch.sum` returns a *scalar*
     when ``dims`` is an empty tuple. Simply returning ``a`` is sufficient to
-    handle this edge case. It is safe to return a view of ``a``, since ``a``
-    is itself never a view of the input tensors, but always a new tensor.
+    handle this edge case. Note that it is always safe to return a *view* of
+    ``a`` from ``sum_block``, since ``a`` is itself never a view of the input
+    tensors, but always a new tensor.
 
     If ``include_indexes`` is ``True``, then ``sum_block`` will receive a
-    third argument ``var_values`` which contains the current indexes of the
+    third argument, ``var_values``, which contains the current indexes of the
     parts of the input tensors being summed over (``sum_block`` is called
-    multiple times on different windows of the inputs). ``var_values`` is a
+    multiple times on different slices of the inputs). ``var_values`` is a
     :py:class:`tuple` of :py:class:`range` objects representing the *ranges*
-    of indexes representing the current window. ``var_values`` contains an
+    of indexes representing the current slice. ``var_values`` contains an
     entry for each summed variable, in order of first appearance in the
     equation.
 
