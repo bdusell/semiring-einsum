@@ -78,7 +78,7 @@ space:
    A = torch.log(torch.rand(10, 3, 5, requires_grad=True))
    B = torch.log(torch.rand(10, 5, 7, requires_grad=True))
    # Run einsum.
-   C = torch_semiring_einsum.log_einsum(EQUATION, A, B)
+   C = torch_semiring_einsum.log_einsum(EQUATION, A, B, block_size=5)
    # Now C is differentiable.
    C.sum().backward()
 
