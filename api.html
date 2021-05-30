@@ -42,7 +42,7 @@
 this package.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>equation</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – An equation in einsum syntax.</p>
+<dd class="field-odd"><p><strong>equation</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – An equation in einsum syntax.</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Equation</span></code></p>
@@ -58,23 +58,23 @@ this package.</p>
 <code class="sig-prename descclassname">torch_semiring_einsum.</code><code class="sig-name descname">real_einsum_forward</code><span class="sig-paren">(</span><em class="sig-param">equation</em>, <em class="sig-param">*args</em>, <em class="sig-param">block_size</em><span class="sig-paren">)</span><a class="headerlink" href="#torch_semiring_einsum.real_einsum_forward" title="Permalink to this definition">¶</a></dt>
 <dd><p>Einsum where addition and multiplication have their usual meanings.</p>
 <p>This function has different memory and runtime characteristics than
-<a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a>, which can be tuned with <code class="docutils literal notranslate"><span class="pre">block_size</span></code>. Higher
+<a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a>, which can be tuned with <code class="docutils literal notranslate"><span class="pre">block_size</span></code>. Higher
 values of <code class="docutils literal notranslate"><span class="pre">block_size</span></code> result in faster runtime and higher memory usage.</p>
 <p>In some cases, when dealing with summations over more than two input
 tensors at once, this implementation can have better space complexity than
-<a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a>, because it does not create intermediate tensors
+<a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a>, because it does not create intermediate tensors
 whose sizes are proportional to the dimensions being summed over.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>equation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Equation</span></code>) – A pre-compiled equation.</p></li>
-<li><p><strong>args</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>) – Input tensors. The number of input tensors must be compatible
+<li><p><strong>args</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>) – Input tensors. The number of input tensors must be compatible
 with <code class="docutils literal notranslate"><span class="pre">equation</span></code>.</p></li>
-<li><p><strong>block_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Block size used to control memory usage.</p></li>
+<li><p><strong>block_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Block size used to control memory usage.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a></p>
+<dd class="field-even"><p><a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a></p>
 </dd>
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>Output of einsum.</p>
@@ -94,16 +94,16 @@ fashion by doing summations in fixed-size chunks.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>equation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Equation</span></code>) – Pre-compiled einsum equation. The derivative of the
 einsum operation specified by this equation will be computed.</p></li>
-<li><p><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>]) – The inputs to the einsum operation whose derivative
+<li><p><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>]) – The inputs to the einsum operation whose derivative
 is being computed.</p></li>
-<li><p><strong>needs_grad</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>]) – Indicates which inputs in <code class="docutils literal notranslate"><span class="pre">args</span></code> require gradient.</p></li>
-<li><p><strong>grad</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>) – The gradient of the loss function with respect to the output
+<li><p><strong>needs_grad</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>]) – Indicates which inputs in <code class="docutils literal notranslate"><span class="pre">args</span></code> require gradient.</p></li>
+<li><p><strong>grad</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>) – The gradient of the loss function with respect to the output
 of the einsum operation.</p></li>
-<li><p><strong>block_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Block size used to control memory usage.</p></li>
+<li><p><strong>block_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Block size used to control memory usage.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.8)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>]]</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>]]</p>
 </dd>
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>The gradients with respect to each of the inputs to the
@@ -131,13 +131,13 @@ replaced with addition <span class="math notranslate nohighlight">\(a + b\)</spa
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>equation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Equation</span></code>) – A pre-compiled equation.</p></li>
-<li><p><strong>args</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>) – Input tensors. The number of input tensors must be compatible
+<li><p><strong>args</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>) – Input tensors. The number of input tensors must be compatible
 with <code class="docutils literal notranslate"><span class="pre">equation</span></code>.</p></li>
-<li><p><strong>block_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Block size used to control memory usage.</p></li>
+<li><p><strong>block_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Block size used to control memory usage.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a></p>
+<dd class="field-even"><p><a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a></p>
 </dd>
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>Output of einsum.</p>
@@ -157,16 +157,16 @@ fashion by doing summations in fixed-size chunks.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>equation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Equation</span></code>) – Pre-compiled einsum equation. The derivative of the
 log-space einsum operation specified by this equation will be computed.</p></li>
-<li><p><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>]) – The inputs to the log-space einsum operation whose derivative
+<li><p><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>]) – The inputs to the log-space einsum operation whose derivative
 is being computed.</p></li>
-<li><p><strong>needs_grad</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>]) – Indicates which inputs in <code class="docutils literal notranslate"><span class="pre">args</span></code> require gradient.</p></li>
-<li><p><strong>grad</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>) – The gradient of the loss function with respect to the output
+<li><p><strong>needs_grad</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>]) – Indicates which inputs in <code class="docutils literal notranslate"><span class="pre">args</span></code> require gradient.</p></li>
+<li><p><strong>grad</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>) – The gradient of the loss function with respect to the output
 of the log-space einsum operation.</p></li>
-<li><p><strong>block_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Block size used to control memory usage.</p></li>
+<li><p><strong>block_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Block size used to control memory usage.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.8)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>]]</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>]]</p>
 </dd>
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>The gradients with respect to each of the inputs to the log-space
@@ -195,13 +195,13 @@ gradient.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>equation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Equation</span></code>) – A pre-compiled equation.</p></li>
-<li><p><strong>args</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>) – Input tensors. The number of input tensors must be compatible
+<li><p><strong>args</strong> (<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>) – Input tensors. The number of input tensors must be compatible
 with <code class="docutils literal notranslate"><span class="pre">equation</span></code>.</p></li>
-<li><p><strong>block_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Block size used to control memory usage.</p></li>
+<li><p><strong>block_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Block size used to control memory usage.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.8)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Tuple</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">LongTensor</span></code>]</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Tuple</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">LongTensor</span></code>]</p>
 </dd>
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>A tuple containing the max and argmax of the einsum operation.
@@ -235,7 +235,7 @@ package and can be used to implement einsum in other semirings as well.</p>
 <p>Note that this function only implements the <em>forward</em> aspect of einsum and
 is not differentiable. To turn your instantiation of einsum in a
 particular semiring into a differentiable PyTorch
-<a class="reference external" href="https://pytorch.org/docs/stable/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Function</span></code></a>, implement its derivative and use
+<a class="reference external" href="https://pytorch.org/docs/stable/autograd.html#torch.autograd.Function" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Function</span></code></a>, implement its derivative and use
 <a class="reference internal" href="#torch_semiring_einsum.combine" title="torch_semiring_einsum.combine"><code class="xref py py-func docutils literal notranslate"><span class="pre">combine()</span></code></a> to combine the forward and
 backward functions into one function. Odds are,
 <a class="reference internal" href="#torch_semiring_einsum.semiring_einsum_forward" title="torch_semiring_einsum.semiring_einsum_forward"><code class="xref py py-func docutils literal notranslate"><span class="pre">semiring_einsum_forward()</span></code></a> can be used to implement the derivative
@@ -254,7 +254,7 @@ semirings is useful (e.g. for a numerically stable logsumexp
 implementation, one must first compute maximum values and then use them
 for a subsequent logsumexp step).</p>
 <p>Here is a quick example that implements the equivalent of
-<a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a>:</p>
+<a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">regular_einsum</span><span class="p">(</span><span class="n">equation</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">block_size</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">compute_sum</span><span class="p">):</span>
         <span class="k">def</span> <span class="nf">add_in_place</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
@@ -282,16 +282,16 @@ values and implements <code class="docutils literal notranslate"><span class="pr
 Likewise, <code class="docutils literal notranslate"><span class="pre">multiply_in_place(a,</span> <span class="pre">b)</span></code> must implement <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">*=</span> <span class="pre">b</span></code> for the
 desired definition of <code class="docutils literal notranslate"><span class="pre">*</span></code>. The arguments <code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code> are values
 returned from <code class="docutils literal notranslate"><span class="pre">sum_block</span></code> (see below) and are usually of type
-<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>, although they can be something fancier for
+<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>, although they can be something fancier for
 cases like Viterbi (which involves a pair of tensors: max and argmax).
 These functions must modify the object <code class="docutils literal notranslate"><span class="pre">a</span></code> <em>in-place</em>; the return value
 is ignored.</p>
 <p><code class="docutils literal notranslate"><span class="pre">sum_block(a,</span> <span class="pre">dims)</span></code> should be a function that “sums” over multiple
 dimensions in a tensor at once. It must return its result. <code class="docutils literal notranslate"><span class="pre">a</span></code> is always
-a <a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>. <code class="docutils literal notranslate"><span class="pre">dims</span></code> is a <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a> of
-<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>s representing the dimensions in <code class="docutils literal notranslate"><span class="pre">a</span></code> to sum out. Take
+a <a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>. <code class="docutils literal notranslate"><span class="pre">dims</span></code> is a <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a> of
+<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>s representing the dimensions in <code class="docutils literal notranslate"><span class="pre">a</span></code> to sum out. Take
 special care to handle the case where <code class="docutils literal notranslate"><span class="pre">dims</span></code> is an empty tuple –
-in particular, keep in mind that <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.sum.html#torch.sum" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.sum()</span></code></a> returns a <em>scalar</em>
+in particular, keep in mind that <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.sum.html#torch.sum" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.sum()</span></code></a> returns a <em>scalar</em>
 when <code class="docutils literal notranslate"><span class="pre">dims</span></code> is an empty tuple. Simply returning <code class="docutils literal notranslate"><span class="pre">a</span></code> is sufficient to
 handle this edge case. Note that it is always safe to return a <em>view</em> of
 <code class="docutils literal notranslate"><span class="pre">a</span></code> from <code class="docutils literal notranslate"><span class="pre">sum_block</span></code>, since <code class="docutils literal notranslate"><span class="pre">a</span></code> is itself never a view of the input
@@ -300,7 +300,7 @@ tensors, but always a new tensor.</p>
 third argument, <code class="docutils literal notranslate"><span class="pre">var_values</span></code>, which contains the current indexes of the
 parts of the input tensors being summed over (<code class="docutils literal notranslate"><span class="pre">sum_block</span></code> is called
 multiple times on different slices of the inputs). <code class="docutils literal notranslate"><span class="pre">var_values</span></code> is a
-<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a> of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#range" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">range</span></code></a> objects representing the <em>ranges</em>
+<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a> of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#range" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">range</span></code></a> objects representing the <em>ranges</em>
 of indexes representing the current slice. <code class="docutils literal notranslate"><span class="pre">var_values</span></code> contains an
 entry for each summed variable, in order of first appearance in the
 equation.</p>
@@ -308,15 +308,15 @@ equation.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>equation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Equation</span></code>) – A pre-compiled equation.</p></li>
-<li><p><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>]) – A list of input tensors.</p></li>
-<li><p><strong>block_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – To keep memory usage in check, the einsum summation is
+<li><p><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>]) – A list of input tensors.</p></li>
+<li><p><strong>block_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – To keep memory usage in check, the einsum summation is
 done over multiple “windows” or “blocks” of bounded size. This
 parameter sets the maximum size of these windows. More precisely, it
 defines the maximum size of the range of values of each summed
 variable that is included in a single window. If there are <code class="docutils literal notranslate"><span class="pre">n</span></code>
 summed variables, the size of the window tensor is proportional to
 <code class="docutils literal notranslate"><span class="pre">block_size</span> <span class="pre">**</span> <span class="pre">n</span></code>.</p></li>
-<li><p><strong>func</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.8)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code></a>) – A callback of the form described above.</p></li>
+<li><p><strong>func</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code></a>) – A callback of the form described above.</p></li>
 </ul>
 </dd>
 </dl>
@@ -332,16 +332,16 @@ memory efficiency than would otherwise be possible.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>forward</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.8)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code></a>) – The forward implementation.</p></li>
-<li><p><strong>backward</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.8)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code></a>) – The backward implementation. Its signature must be
+<li><p><strong>forward</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code></a>) – The forward implementation.</p></li>
+<li><p><strong>backward</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code></a>) – The backward implementation. Its signature must be
 <code class="docutils literal notranslate"><span class="pre">backward(equation,</span> <span class="pre">args,</span> <span class="pre">needs_grad,</span> <span class="pre">grad,</span> <span class="pre">block_size)</span></code>, and it
-must return a <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a> of <a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>
+must return a <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a> of <a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></a>
 containing the gradients with respect to <code class="docutils literal notranslate"><span class="pre">args</span></code>. The <span class="math notranslate nohighlight">\(i\)</span>th
 gradient may be <code class="docutils literal notranslate"><span class="pre">None</span></code> if <code class="docutils literal notranslate"><span class="pre">needs_grad[i]</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.8)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code></a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code></a></p>
 </dd>
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>A function whose return value is compatible with PyTorch’s

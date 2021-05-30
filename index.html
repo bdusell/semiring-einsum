@@ -44,7 +44,7 @@ that supports multiple
 <a class="reference external" href="https://en.wikipedia.org/wiki/Semiring">semirings</a>.
 It includes implementations for the real, log, and Viterbi semirings out of
 the box and can be extended to support additional semirings. It can also offer
-better performance than the built-in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a> function and
+better performance than the built-in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a> function and
 makes the memory-execution time tradeoff configurable, allowing you to run
 large einsum operations that might otherwise be impossible given typical
 hardware constraints.</p>
@@ -57,7 +57,7 @@ percentage of memory saved is typically much greater than the percentage of
 speed lost. This einsum implementation allows you to set the block size and
 tune the tradeoff between memory and speed.</p>
 <p>In some cases, this einsum implementation has even better space complexity
-than the built-in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a> function, because it does not need
+than the built-in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a> function, because it does not need
 to create intermediate tensors whose sizes are proportional to the dimensions
 being summed over.</p>
 <div class="toctree-wrapper compound">
@@ -97,7 +97,7 @@ space:</p>
 <span class="n">A</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 <span class="n">B</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 <span class="c1"># Run einsum.</span>
-<span class="n">C</span> <span class="o">=</span> <span class="n">torch_semiring_einsum</span><span class="o">.</span><span class="n">log_einsum</span><span class="p">(</span><span class="n">EQUATION</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">)</span>
+<span class="n">C</span> <span class="o">=</span> <span class="n">torch_semiring_einsum</span><span class="o">.</span><span class="n">log_einsum</span><span class="p">(</span><span class="n">EQUATION</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">block_size</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 <span class="c1"># Now C is differentiable.</span>
 <span class="n">C</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
 </pre></div>
@@ -156,7 +156,7 @@ context of context-free grammar parsing, see <a class="bibtex reference internal
 <div class="section" id="einsum-syntax">
 <h2>Einsum Syntax<a class="headerlink" href="#einsum-syntax" title="Permalink to this headline">¶</a></h2>
 <p>This package supports the same einsum equation syntax as
-<a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a>, except it does not support ellipses (<code class="docutils literal notranslate"><span class="pre">...</span></code>) syntax.</p>
+<a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a>, except it does not support ellipses (<code class="docutils literal notranslate"><span class="pre">...</span></code>) syntax.</p>
 </div>
 <div class="section" id="time-and-space-complexity">
 <h2>Time and Space Complexity<a class="headerlink" href="#time-and-space-complexity" title="Permalink to this headline">¶</a></h2>
@@ -166,7 +166,7 @@ Implementations of einsum in NumPy and PyTorch would compute this by
 contracting two tensors at a time, performing two separate tensor
 multiplications. This means that they must create an intermediate tensor of
 size <span class="math notranslate nohighlight">\(A \times K\)</span>. There is even a routine in NumPy,
-<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.einsum_path.html#numpy.einsum_path" title="(in NumPy v1.19)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.einsum_path()</span></code></a>, which figures out the best contraction order.
+<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.einsum_path.html#numpy.einsum_path" title="(in NumPy v1.20)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.einsum_path()</span></code></a>, which figures out the best contraction order.
 However, it should, in principle, be possible to avoid this by summing over
 all tensors at the same time. This is exactly what <code class="docutils literal notranslate"><span class="pre">torch_semiring_einsum</span></code> does,
 and as a result the amount of scratch space the forward pass of einsum requires
@@ -196,7 +196,7 @@ dimension <code class="docutils literal notranslate"><span class="pre">k</span><
 <img alt="_images/time-complexity.png" src="_images/time-complexity.png" />
 <img alt="_images/time-complexity-2.png" src="_images/time-complexity-2.png" />
 <p>As we can see, execution time gets dramatically better even with small
-increases in block size. The built-in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch vmaster (1.6.0a0+4392e52 ))"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a> function is still
+increases in block size. The built-in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="(in PyTorch v1.8.0a0+56b43f4)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.einsum()</span></code></a> function is still
 much faster than the blocked versions, but when the block size is unbounded
 and the summation is fully parallel, it is even faster.</p>
 <img alt="_images/space-complexity.png" src="_images/space-complexity.png" />
