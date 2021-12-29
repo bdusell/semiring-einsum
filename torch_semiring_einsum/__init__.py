@@ -21,6 +21,8 @@ This combines :py:func:`log_einsum_forward` and
 :py:func:`log_einsum_backward` into one auto-differentiable function.
 """
 
+log_viterbi_einsum = log_viterbi_einsum_forward
+
 __all__ = [
     'compile_equation',
     'real_einsum_forward',
@@ -29,7 +31,7 @@ __all__ = [
     'log_einsum_forward',
     'log_einsum_backward',
     'log_einsum',
-    'log_viterbi_einsum_forward',
+    'log_viterbi_einsum',
     'semiring_einsum_forward',
     'combine'
 ]
