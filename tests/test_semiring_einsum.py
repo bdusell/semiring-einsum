@@ -204,6 +204,8 @@ class TestSemiringEinsum(unittest.TestCase):
         eq = compile_equation('->')
         ans = einsum(eq, torch.tensor(1.), block_size=1)
         self.assertAlmostEqual(ans.item(), 1.)
+        ans = log_einsum(eq, torch.tensor(2.), block_size=1)
+        self.assertAlmostEqual(ans.item(), 2.)
 
 def reference_log_viterbi_einsum(X1, X2, X3, device):
     Y_max = []

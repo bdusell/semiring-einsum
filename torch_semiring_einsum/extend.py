@@ -166,7 +166,8 @@ def semiring_einsum_forward_impl(equation, args, block_size, inputs,
     return reduce_in_place(add_in_place, generate_terms())
 
 def adjust_size(arg, size):
-    if arg.ndim == 0: return arg
+    if arg.ndim == 0:
+        return arg.clone()
     repeat_size = []
     for output_size, arg_size in zip(size, arg.size()):
         repeat_size.append(output_size if arg_size == 1 else 1)
