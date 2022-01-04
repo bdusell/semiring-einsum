@@ -88,6 +88,11 @@ scratch every time einsum is called.
 
 In addition to `einsum`, the module also exposes a differentiable `log_einsum` and a non-differentiable `log_viterbi_einsum`.
 
+Derived Functions
+-----------------
+
+For convenience, the module also implements functions `tensordot`, `matmul`, `inner`, `dot`, `mm`, `bmm`, `mv`, and `outer` in terms of einsum. All of these functions take a `block_size` argument and an `einsum` argument, which defaults to `torch_semiring_einsum.einsum` but can be set to other einsum replacements like `log_einsum`, etc.
+
 API Documentation
 -----------------
 

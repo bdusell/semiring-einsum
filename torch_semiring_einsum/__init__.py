@@ -6,6 +6,7 @@ from .real_backward import real_einsum_backward
 from .log_forward import log_einsum_forward
 from .log_backward import log_einsum_backward
 from .log_viterbi_forward import log_viterbi_einsum_forward
+from .derived import *
 
 einsum = combine(real_einsum_forward, real_einsum_backward)
 r"""Differentiable version of ordinary (real) einsum.
