@@ -73,7 +73,7 @@ def mm(a, b, *, block_size, einsum=default_einsum):
     return einsum(mm_equation, a, b, block_size=block_size)
 
 mv_equation = compile_equation('ij,j->i')
-def mm(a, b, *, block_size, einsum=default_einsum):
+def mv(a, b, *, block_size, einsum=default_einsum):
     if a.ndim != 2 or b.ndim != 1:
         raise ValueError('arguments must be 2-dimensional and 1-dimensional, respectively')
     return einsum(mv_equation, a, b, block_size=block_size)
