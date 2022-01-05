@@ -22,6 +22,8 @@ This combines :py:func:`log_einsum_forward` and
 """
 
 log_viterbi_einsum = log_viterbi_einsum_forward
+r"""Non-differentiable alias of :py:func:`log_viterbi_einsum_forward`.
+"""
 
 __all__ = [
     'compile_equation',
