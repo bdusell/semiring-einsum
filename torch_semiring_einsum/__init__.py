@@ -21,7 +21,9 @@ This combines :py:func:`log_einsum_forward` and
 :py:func:`log_einsum_backward` into one auto-differentiable function.
 """
 
-log_viterbi_einsum = log_viterbi_einsum_forward
+def backward_not_implemented(*args):
+    raise NotImplementedError()
+log_viterbi_einsum = combine(log_viterbi_einsum_forward, backward_not_implemented)
 r"""Non-differentiable alias of :py:func:`log_viterbi_einsum_forward`.
 """
 
