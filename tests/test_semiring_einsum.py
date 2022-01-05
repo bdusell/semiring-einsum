@@ -200,6 +200,13 @@ class TestSemiringEinsum(unittest.TestCase):
         numpy.testing.assert_allclose(maxval, expected_maxval)
         self.assertTrue(torch.equal(argmax, expected_argmax))
 
+    def test_zero_dim(self):
+        eq = compile_equation('->')
+        ans = einsum(eq, torch.tensor(1.), block_size=1)
+        self.assertAlmostEqual(ans.item(), 1.)
+        ans = log_einsum(eq, torch.tensor(2.), block_size=1)
+        self.assertAlmostEqual(ans.item(), 2.)
+
 def reference_log_viterbi_einsum(X1, X2, X3, device):
     Y_max = []
     Y_argmax = []
