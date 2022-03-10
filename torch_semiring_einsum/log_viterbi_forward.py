@@ -52,10 +52,10 @@ def viterbi_max_in_place(a, b):
     # a_is_less : X1 x ... x Xn
     a_is_less = torch.lt(a_max, b_max)
     # Replace elements in a with the new maximum.
-    a_max[:] = torch.where(a_is_less, b_max, a_max)
+    a_max[...] = torch.where(a_is_less, b_max, a_max)
     # Replace elements in the argmax tensor with the updated index.
     # Unfortunately there is no in-place version of where() (yet).
-    a_argmax[:] = torch.where(
+    a_argmax[...] = torch.where(
         a_is_less.unsqueeze(-1),
         b_argmax,
         a_argmax)
