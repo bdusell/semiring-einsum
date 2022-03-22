@@ -19,10 +19,7 @@ def sum_block(a, dims):
         return a
 
 def max_block(a, dims):
-    result = a
-    for dim in reversed(dims):
-        result = torch.max(result, dim=dim).values
-    return result
+    return amax(a, dims)
 
 def clip_max_values(max_values):
     # Clipping to `min_float` fixes an edge case where all terms are -inf
@@ -34,3 +31,16 @@ def resize_max_values(max_values, num_reduced_vars):
     # Resize max_values so it can broadcast with the shape
     # output_vars + reduced_vars.
     return max_values.view(list(max_values.size()) + [1] * num_reduced_vars)
+
+def amax(a, dim, keepdim=False):
+    """Find the maximum of a tensor over zero or more dimensions."""
+    try:
+        # PyTorch >= 1.10
+        result = torch.amax(a, dim=dim, keepdim=keepdim)
+    except AttributeError:
+        # PyTorch < 1.10
+        result = a
+        for dim in reversed(dims):
+            result = torch.max(result, dim=dim, keepdim=keepdim).values
+    return result
+
