@@ -32,6 +32,9 @@ class TestSemiringEinsum(unittest.TestCase):
         self.device = torch.device('cpu')
         self.generator = torch.manual_seed(123)
 
+    def assert_is_finite(self, tensor, message=None):
+        self.assertTrue(torch.all(torch.isfinite(tensor)).item(), message)
+
     def test_real_einsum_forward(self):
         args = [
             torch.rand(size, device=self.device, generator=self.generator)
@@ -84,6 +87,7 @@ class TestSemiringEinsum(unittest.TestCase):
             compile_equation(EQUATION_STR),
             *args,
             block_size=3)
+        numpy.testing.assert_allclose(output.detach(), expected_output.detach(), rtol=1e-6)
         loss = output.sum()
         loss.backward()
         grads = [arg.grad.clone() for arg in args]
@@ -150,6 +154,7 @@ class TestSemiringEinsum(unittest.TestCase):
             *[torch.log(arg) for arg in args],
             block_size=3)
         output = torch.exp(log_output)
+        numpy.testing.assert_allclose(output.detach(), expected_output.detach(), rtol=1e-6)
         loss = output.sum()
         loss.backward()
         grads = [arg.grad.clone() for arg in args]
@@ -173,12 +178,12 @@ class TestSemiringEinsum(unittest.TestCase):
             *args,
             block_size=3)
         # The output should not have inf or nan.
-        self.assertTrue(torch.isfinite(output).prod().eq(1).item())
+        self.assert_is_finite(output)
         loss = output.sum()
         loss.backward()
         for arg in args:
             # The gradients should not have inf or nan.
-            self.assertTrue(torch.isfinite(arg.grad).prod().eq(1).item())
+            self.assert_is_finite(arg.grad)
 
     def test_log_viterbi_einsum_forward(self):
         args = [
