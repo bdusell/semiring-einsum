@@ -172,7 +172,7 @@ class TestSemiringEinsum(unittest.TestCase):
             arg.data.uniform_(0.0, 100.0, generator=self.generator)
         # Make sure the arguments would cause exp() to overflow.
         for arg in args:
-            self.assertTrue(torch.isinf(torch.exp(arg)).sum().ne(0).item())
+            self.assertTrue(torch.any(torch.isinf(torch.exp(arg))).item())
         output = log_einsum(
             compile_equation(EQUATION_STR),
             *args,
@@ -184,6 +184,36 @@ class TestSemiringEinsum(unittest.TestCase):
         for arg in args:
             # The gradients should not have inf or nan.
             self.assert_is_finite(arg.grad)
+
+    def test_log_einsum_backward_all_neg_inf(self):
+        # Test the behavior of the backward pass of log einsum when all of the
+        # inputs are -inf. The gradient of logsumexp is softmax. The behavior
+        # of PyTorch's builtin logsumexp is to return NaN gradients (because
+        # the denominator of the softmax is 0).
+        args = [
+            torch.full(size, -math.inf, device=self.device)
+            for size in SIZES
+        ]
+        grad = torch.ones(OUTPUT_SIZE, device=self.device)
+        arg_grads = log_einsum_backward(
+            compile_equation(EQUATION_STR),
+            args,
+            [True for arg in args],
+            grad,
+            block_size=3)
+        for arg_grad, size in zip(arg_grads, SIZES):
+            self.assertEqual(arg_grad.size(), size)
+            self.assertTrue(torch.all(torch.isnan(arg_grad)).item(), 'gradient should be nan')
+        # Test the option that sets the gradient to 0.
+        arg_grads = log_einsum_backward(
+            compile_equation(EQUATION_STR),
+            args,
+            [True for arg in args],
+            grad,
+            block_size=3,
+            grad_of_neg_inf=0.0)
+        for arg_grad, size in zip(arg_grads, SIZES):
+            numpy.testing.assert_allclose(arg_grad, torch.zeros(size, device=self.device))
 
     def test_log_viterbi_einsum_forward(self):
         args = [
