@@ -115,7 +115,10 @@ def log_einsum_backward(
     # C : same size as output of equation
     if isinstance(grad_of_neg_inf, float):
         if math.isnan(grad_of_neg_inf):
-            # Whenever Z is 0, let it be nan.
+            # Wherever Z is 0, let the gradient be nan.
+            # Dividing grad by 0 here actually does not result in nan, but
+            # +inf. However, the +inf will later result in nan when C is
+            # multiplied with `term`, because 0 * inf is nan.
             C = grad / Z
         else:
             # Whenever Z is 0, use the value of grad_of_neg_inf as the gradient
@@ -186,6 +189,8 @@ def log_einsum_backward(
                     # As it is, this multiplication cannot be moved outside
                     # this loop, because var_values might range over a
                     # dimension in the output.
+                    # If C is +inf here (because Z was 0), then this will
+                    # result in nan, because term will be 0 and 0 * inf is nan.
                     term.mul_(output_lookup_info.lookup(C, var_values))
                     yield sum_block(term, reduce_info.reduced_dims)
 
