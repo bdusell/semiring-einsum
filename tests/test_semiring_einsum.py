@@ -245,6 +245,94 @@ class TestSemiringEinsum(unittest.TestCase):
         for arg, size in zip(args, SIZES):
             numpy.testing.assert_allclose(arg.grad, torch.zeros(size, device=self.device))
 
+    def test_log_einsum_edge_cases(self):
+        # Test the behavior of log_einsum when inputs are inf, -inf, nan, etc.
+        EQUATION_STR = 'ab,ab->a'
+        A, B = 7, 7
+        SIZES = [(A, B), (A, B)]
+        OUTPUT_SIZE = (A,)
+        args = [
+            torch.zeros(size, device=self.device)
+            for size in SIZES
+        ]
+        expected_output = torch.zeros(OUTPUT_SIZE, device=self.device)
+        expected_grads = [
+            torch.zeros(size, device=self.device)
+            for size in SIZES
+        ]
+
+        neg_inf_grad = 0.0
+
+        # 0. Set all inputs to 5.
+        for arg in args:
+            arg[0] = 5.0
+        expected_output[0] = math.log(B * math.exp(10.0))
+        for grad in expected_grads:
+            grad[0] = 1.0 / B
+
+        # 1. Set all inputs to -inf.
+        for arg in args:
+            arg[1] = -math.inf
+        expected_output[1] = -math.inf
+        for grad in expected_grads:
+            grad[1] = neg_inf_grad
+
+        # 2. Set one input to -inf, and the other to 5.
+        args[0][2] = -math.inf
+        args[1][2] = 5.0
+        expected_output[2] = -math.inf
+        for grad in expected_grads:
+            grad[2] = neg_inf_grad
+
+        # 3. All terms are -inf, but neither input is all -inf.
+        args[0][3, (0, 2, 3, 5)] = 5.0
+        args[1][3, (1, 6)] = 5.0
+        for arg in args:
+            arg[3][arg[3] != 5.0] = -math.inf
+        expected_output[3] = -math.inf
+        for grad in expected_grads:
+            grad[3] = neg_inf_grad
+
+        # 4. Only one input is -inf.
+        for arg in args:
+            arg[4] = 5.0
+        args[0][4, 3] = -math.inf
+        expected_output[4] = math.log((B-1) * math.exp(10.0))
+        for grad in expected_grads:
+            grad[4] = 1.0 / (B-1)
+            grad[4, 3] = 0.0
+
+        # 5. One input is nan.
+        for arg in args:
+            arg[5] = 5.0
+        args[0][5, 2] = math.nan
+        expected_output[5] = math.nan
+        for grad in expected_grads:
+            grad[5] = math.nan
+
+        # 6. One input is +inf.
+        for arg in args:
+            arg[6] = 5.0
+        args[1][6, 5] = math.inf
+        expected_output[6] = math.inf
+        for grad in expected_grads:
+            grad[6] = 0.0
+            # This is like inf/inf, which is nan. torch.logsumexp treats sets
+            # the gradient to nan here.
+            grad[6, 5] = math.nan
+
+        args = [torch.nn.Parameter(arg) for arg in args]
+        output = log_einsum(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=3,
+            grad_of_neg_inf=0.0
+        )
+        numpy.testing.assert_allclose(output.detach(), expected_output)
+        output.sum().backward()
+        for arg, expected_grad in zip(args, expected_grads):
+            numpy.testing.assert_allclose(arg.grad, expected_grad)
+
     def test_log_einsum_overflow2(self):
         # Test that log einsum does return inf (not nan) when dealing
         # with extremely large values.
