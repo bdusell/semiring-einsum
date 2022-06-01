@@ -35,6 +35,6 @@ setuptools.setup(
     ],
     python_requires='>=3.7',
     install_requires=[
-        'torch>=1.0.0'
+        'torch>=1.8.0'
     ]
 )
