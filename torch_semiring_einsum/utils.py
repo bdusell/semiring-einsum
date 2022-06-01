@@ -1,3 +1,5 @@
+import math
+
 import torch
 
 def add_in_place(a, b):
@@ -25,9 +27,16 @@ def max_block(a, dims):
     return result
 
 def clip_max_values(max_values):
-    # Clipping to the min/max float fixes an edge case where all terms are -inf/+inf
-    # (the problem is that (-inf - -inf) or (+inf - +inf) produces nan).
-    max_values.copy_(torch.nan_to_num(max_values))
+    """Given a tensor of maximum values (e.g. of terms to a logsumexp), ensure
+    that none of the values will produce NaN when they are subtracted from the
+    terms."""
+    # This will clip +inf to the max float value, and -inf to the min float
+    # value. Clipping to the min/max float fixes an edge case where all terms
+    # are -inf/+inf (the problem is that (-inf - -inf) or (+inf - +inf)
+    # produces nan). Values of nan are left as-is, although it should be
+    # harmless to replace them with 0, because the terms to the logsumexp would
+    # be nan anyway, so the nans would not be silently suppressed.
+    max_values.nan_to_num_(nan=math.nan)
 
 def resize_max_values(max_values, num_reduced_vars):
     # Resize max_values so it can broadcast with the shape
