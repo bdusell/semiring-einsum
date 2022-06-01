@@ -25,10 +25,9 @@ def max_block(a, dims):
     return result
 
 def clip_max_values(max_values):
-    # Clipping to `min_float` fixes an edge case where all terms are -inf
-    # (the problem is that (-inf - -inf) produces nan).
-    min_float = max_values.new_tensor(torch.finfo(max_values.dtype).min)
-    max_in_place(max_values, min_float)
+    # Clipping to the min/max float fixes an edge case where all terms are -inf/+inf
+    # (the problem is that (-inf - -inf) or (+inf - +inf) produces nan).
+    max_values.copy_(torch.nan_to_num(max_values))
 
 def resize_max_values(max_values, num_reduced_vars):
     # Resize max_values so it can broadcast with the shape

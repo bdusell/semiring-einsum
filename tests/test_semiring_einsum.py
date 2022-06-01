@@ -245,6 +245,13 @@ class TestSemiringEinsum(unittest.TestCase):
         for arg, size in zip(args, SIZES):
             numpy.testing.assert_allclose(arg.grad, torch.zeros(size, device=self.device))
 
+    def test_log_einsum_overflow2(self):
+        # Test that log einsum does return inf (not nan) when dealing
+        # with extremely large values.
+        eq = compile_equation(',->')
+        out = log_einsum(eq, torch.tensor(2e38), torch.tensor(2e38), block_size=1)
+        self.assertEqual(out.item(), math.inf)
+
     def test_log_viterbi_einsum_forward(self):
         args = [
             torch.empty(size, device=self.device)
