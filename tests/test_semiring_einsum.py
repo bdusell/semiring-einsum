@@ -185,6 +185,19 @@ class TestSemiringEinsum(unittest.TestCase):
             # The gradients should not have inf or nan.
             self.assert_is_finite(arg.grad)
 
+    def test_log_einsum_forward_all_neg_inf(self):
+        # Test the behavior of the forward pass of log einsum when all of the
+        # inputs are -inf. The output should be -inf.
+        args = [
+            torch.full(size, -math.inf, device=self.device)
+            for size in SIZES
+        ]
+        output = log_einsum_forward(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=3)
+        self.assertTrue(torch.equal(output, torch.full(OUTPUT_SIZE, -math.inf, device=self.device)))
+
     def test_log_einsum_backward_all_neg_inf(self):
         # Test the behavior of the backward pass of log einsum when all of the
         # inputs are -inf. The gradient of logsumexp is softmax. The behavior
@@ -214,6 +227,23 @@ class TestSemiringEinsum(unittest.TestCase):
             grad_of_neg_inf=0.0)
         for arg_grad, size in zip(arg_grads, SIZES):
             numpy.testing.assert_allclose(arg_grad, torch.zeros(size, device=self.device))
+
+    def test_grad_of_neg_inf_option(self):
+        # Test that the grad_of_neg_inf works with log_einsnum.
+        args = [
+            torch.nn.Parameter(torch.full(size, -math.inf, device=self.device))
+            for size in SIZES
+        ]
+        output = log_einsum(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=3,
+            grad_of_neg_inf=0.0)
+        self.assertTrue(torch.equal(output, torch.full(OUTPUT_SIZE, -math.inf, device=self.device)))
+        loss = output.sum()
+        loss.backward()
+        for arg, size in zip(args, SIZES):
+            numpy.testing.assert_allclose(arg.grad, torch.zeros(size, device=self.device))
 
     def test_log_viterbi_einsum_forward(self):
         args = [
