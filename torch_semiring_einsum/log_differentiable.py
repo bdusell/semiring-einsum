@@ -11,6 +11,14 @@ class LogEinsumFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, equation, block_size, save_max, save_sumexpsub,
             grad_of_neg_inf, *args):
+        # If the gradient will not be needed, do not save any extra tensors
+        # for the backward pass (this avoids some unnecessary cloning).
+        # It looks like needs_input_grad is still true when some inputs have
+        # needs_grad=True even when torch.no_grad() is used, but I don't know
+        # a better way to detect this (torch.is_grad_enabled() is always false
+        # in forward()).
+        if not any(ctx.needs_input_grad):
+            save_max = save_sumexpsub = False
         ctx.equation = equation
         ctx.block_size = block_size
         ctx.save_max = save_max
