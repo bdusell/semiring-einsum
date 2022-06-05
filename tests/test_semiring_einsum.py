@@ -185,6 +185,13 @@ class TestSemiringEinsum(unittest.TestCase):
             # The gradients should not have inf or nan.
             self.assert_is_finite(arg.grad)
 
+    def test_log_einsum_overflow_inf(self):
+        # Test that log einsum does return inf (not nan) when dealing
+        # with extremely large values.
+        eq = compile_equation(',->')
+        out = log_einsum(eq, torch.tensor(2e38), torch.tensor(2e38), block_size=1)
+        self.assertEqual(out.item(), math.inf)
+
     def test_log_einsum_forward_all_neg_inf(self):
         # Test the behavior of the forward pass of log einsum when all of the
         # inputs are -inf. The output should be -inf.
@@ -229,7 +236,7 @@ class TestSemiringEinsum(unittest.TestCase):
             numpy.testing.assert_allclose(arg_grad, torch.zeros(size, device=self.device))
 
     def test_grad_of_neg_inf_option(self):
-        # Test that the grad_of_neg_inf works with log_einsnum.
+        # Test that the grad_of_neg_inf option works with log_einsnum.
         args = [
             torch.nn.Parameter(torch.full(size, -math.inf, device=self.device))
             for size in SIZES
@@ -333,12 +340,37 @@ class TestSemiringEinsum(unittest.TestCase):
         for arg, expected_grad in zip(args, expected_grads):
             numpy.testing.assert_allclose(arg.grad, expected_grad)
 
-    def test_log_einsum_overflow2(self):
-        # Test that log einsum does return inf (not nan) when dealing
-        # with extremely large values.
-        eq = compile_equation(',->')
-        out = log_einsum(eq, torch.tensor(2e38), torch.tensor(2e38), block_size=1)
-        self.assertEqual(out.item(), math.inf)
+    def test_log_einsum_save(self):
+        # Test that log_einsum produces the same results when the save options
+        # are used and when they are not used.
+        args = [
+            torch.nn.Parameter(torch.rand(
+                size, device=self.device, generator=self.generator))
+            for size in SIZES
+        ]
+        save_output = log_einsum(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=10,
+            save_max=False,
+            save_sumexpsub=False
+        )
+        save_output.sum().backward()
+        save_grads = [arg.grad.clone() for arg in args]
+        for arg in args:
+            arg.grad.zero_()
+        no_save_output = log_einsum(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=10,
+            save_max=True,
+            save_sumexpsub=True
+        )
+        no_save_output.sum().backward()
+        numpy.testing.assert_allclose(save_output.detach(), no_save_output.detach())
+        no_save_grads = [arg.grad.clone() for arg in args]
+        for save_grad, no_save_grad in zip(save_grads, no_save_grads):
+            numpy.testing.assert_allclose(save_grad, no_save_grad)
 
     def test_log_viterbi_einsum_forward(self):
         args = [
@@ -362,10 +394,10 @@ class TestSemiringEinsum(unittest.TestCase):
 
     def test_zero_dim(self):
         eq = compile_equation('->')
-        ans = einsum(eq, torch.tensor(1.), block_size=1)
-        self.assertAlmostEqual(ans.item(), 1.)
-        ans = log_einsum(eq, torch.tensor(2.), block_size=1)
-        self.assertAlmostEqual(ans.item(), 2.)
+        ans = einsum(eq, torch.tensor(1.0), block_size=1)
+        self.assertAlmostEqual(ans.item(), 1.0)
+        ans = log_einsum(eq, torch.tensor(2.0), block_size=1)
+        self.assertAlmostEqual(ans.item(), 2.0)
 
 def reference_log_viterbi_einsum(X1, X2, X3, device):
     Y_max = []

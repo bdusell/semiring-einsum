@@ -5,14 +5,18 @@ import typing
 import torch
 
 from .equation import Equation, get_ranges
-from .extend import semiring_einsum_forward_impl, reduce_in_place, adjust_size
+from .extend import (
+    semiring_einsum_forward_impl,
+    reduce_in_place,
+    adjust_size
+)
 from .utils import (
-    max_in_place,
-    max_block,
     add_in_place,
-    sum_block,
-    clip_max_values,
-    resize_max_values
+    sum_block
+)
+from .log_forward import (
+    compute_max,
+    compute_sumexpsub
 )
 
 def log_einsum_backward(
@@ -21,7 +25,9 @@ def log_einsum_backward(
         needs_grad: typing.Sequence[bool],
         grad: torch.Tensor,
         block_size: int,
-        grad_of_neg_inf: typing.Union[float, typing.Literal['uniform']]=math.nan
+        grad_of_neg_inf: typing.Union[float, typing.Literal['uniform']]=math.nan,
+        saved_max: typing.Optional[torch.Tensor]=None,
+        saved_sumexpsub: typing.Optional[torch.Tensor]=None
     ) -> typing.List[typing.Optional[torch.Tensor]]:
     r"""Compute the derivative of
     :py:func:`~torch_semiring_einsum.log_einsum_forward`.
@@ -53,6 +59,10 @@ def log_einsum_backward(
         softmax, and in this case it will attempt to increase the inputs to the
         logsumexp above :math:`-\infty`. NOTE: Only NaN and 0 are currently
         implemented.
+    :param saved_max: See ``return_max`` in
+        :py:func:`~torch_semiring_einsum.log_einsum_forward`.
+    :param saved_sumexpsub: See ``return_sumexpsub`` in
+        :py:func:`~torch_semiring_einsum.log_einsum_forward`.
     :return: The gradients with respect to each of the inputs to the log-space
         einsum operation. Returns ``None`` for inputs that do not require
         gradient.
@@ -69,6 +79,7 @@ def log_einsum_backward(
         raise ValueError(
             'size of gradient {} does not match expected size {}'.format(
                 grad_size, output_size))
+
     # The gradient of logsumexp is softmax (logsumexp is a soft version of max,
     # and softmax is a soft version of argmax). So essentially we're computing
     # a softmax here. In order to avoid overflow in the exp() function, we need
@@ -79,38 +90,18 @@ def log_einsum_backward(
     # Z is the denominator of the softmax. We first do a separate pass through
     # the inputs to compute the maximums, then we use those to compute Z and
     # later the numerators.
-    # max_values : same size as output of equation
-    max_values = semiring_einsum_forward_impl(
-        equation,
-        args,
-        block_size,
-        args,
-        add_in_place=max_in_place,
-        sum_block=max_block,
-        multiply_in_place=add_in_place,
-        reduce_info=equation.reduce_input_to_output,
-        include_indexes=False)
-    clip_max_values(max_values)
-    resized_max_values = resize_max_values(
-        max_values,
-        len(equation.reduce_input_to_output.reduced_variables))
 
-    def sumexpsub_block(a, dims):
-        a.sub_(resized_max_values)
-        a.exp_()
-        return sum_block(a, dims)
+    # max_values : same size as output of equation
+    if saved_max is None:
+        max_values = compute_max(equation, args, block_size)
+    else:
+        max_values = saved_max
 
     # Z : same size as output of equation
-    Z = semiring_einsum_forward_impl(
-        equation,
-        args,
-        block_size,
-        args,
-        add_in_place=add_in_place,
-        sum_block=sumexpsub_block,
-        multiply_in_place=add_in_place,
-        reduce_info=equation.reduce_input_to_output,
-        include_indexes=False)
+    if saved_sumexpsub is None:
+        Z = compute_sumexpsub(equation, args, block_size, max_values)
+    else:
+        Z = saved_sumexpsub
 
     # C : same size as output of equation
     if isinstance(grad_of_neg_inf, float):
@@ -143,6 +134,7 @@ def log_einsum_backward(
     else:
         raise ValueError(f'invalid choice for grad_of_neg_inf: {grad_of_neg_inf}')
     del Z
+
     arg_grads = []
     for i, arg in enumerate(args):
         if needs_grad[i]:
@@ -199,7 +191,3 @@ def log_einsum_backward(
             arg_grad = None
         arg_grads.append(arg_grad)
     return arg_grads
-
-def _sumexp_block(a, dims):
-    a.exp_()
-    return sum_block(a, dims)

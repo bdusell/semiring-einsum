@@ -33,6 +33,8 @@ def real_einsum_backward(
     # grad : same size as output of equation
     if len(args) != len(needs_grad):
         raise ValueError('length of args is not equal to length of needs_grad')
+    # TODO It should be possible to avoid saving args when needs_grad is false
+    # for other args.
     equation.validate_sizes(args)
     equation.prepare_for_backward()
     output_size = tuple(equation.get_sizes(args, equation.output_variables))
