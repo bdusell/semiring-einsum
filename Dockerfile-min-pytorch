@@ -1,0 +1,10 @@
+ARG MIN_PYTHON_VERSION
+FROM python:${MIN_PYTHON_VERSION}
+ENV LC_ALL C.UTF-8
+WORKDIR /app/
+COPY MIN_PYTORCH_VERSION .
+RUN version=`cat MIN_PYTORCH_VERSION` && \
+    pip install torch==$version numpy
+COPY torch_semiring_einsum/ ./torch_semiring_einsum
+COPY tests/ ./tests
+COPY scripts/ ./scripts

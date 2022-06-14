@@ -8,7 +8,7 @@ repository = "https://github.com/bdusell/semiring-einsum"
 homepage = "https://bdusell.github.io/semiring-einsum/"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 torch = "^1.11.0"
 
 [tool.poetry.dev-dependencies]

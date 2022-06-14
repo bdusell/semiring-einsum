@@ -15,6 +15,12 @@ with open('pyproject.toml') as fin:
 with open('README.md') as fin:
     long_description = fin.read()
 
+with open('MIN_PYTHON_VERSION') as fin:
+    min_python_version = fin.read().strip()
+
+with open('MIN_PYTORCH_VERSION') as fin:
+    min_pytorch_version = fin.read().strip()
+
 setuptools.setup(
     name=pyproject['name'],
     version=pyproject['version'],
@@ -33,8 +39,8 @@ setuptools.setup(
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         'Topic :: Scientific/Engineering :: Mathematics',
     ],
-    python_requires='>=3.7',
+    python_requires='>=' + min_python_version,
     install_requires=[
-        'torch>=1.8.0'
+        'torch>=' + min_pytorch_version
     ]
 )

@@ -1,5 +1,7 @@
 set -e
 set -u
+set -o pipefail
 
-bash scripts/run-test.bash tests/test_semiring_einsum.py
-bash scripts/run-test.bash tests/test_more_equations.py
+find tests -name 'test_*.py' | sort | while read -r line; do
+  bash scripts/run-test.bash "$line"
+done
