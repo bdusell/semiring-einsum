@@ -1,4 +1,3 @@
-import math
 import typing
 
 import torch
@@ -12,7 +11,8 @@ from .utils import (
     max_in_place,
     max_block,
     add_in_place,
-    sum_block
+    sum_block,
+    clip_inf_in_place
 )
 
 def log_einsum_forward(
@@ -81,7 +81,7 @@ def compute_max(equation, args, block_size):
     # produces nan). Values of nan are left as-is, although it should be
     # harmless to replace them with 0, because the terms to the logsumexp would
     # be nan anyway, so the nans would not be silently suppressed.
-    max_values.nan_to_num_(nan=math.nan)
+    clip_inf_in_place(max_values)
     return max_values
 
 def resize_max_values(max_values, equation):

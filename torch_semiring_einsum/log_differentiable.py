@@ -6,6 +6,7 @@ from .equation import Equation
 from .log_forward import log_einsum_forward
 from .log_backward import log_einsum_backward
 
+# The Function API has been available since PyTorch 0.2.0.
 class LogEinsumFunction(torch.autograd.Function):
 
     @staticmethod

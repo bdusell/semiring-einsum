@@ -28,6 +28,7 @@ def combine(
         autograd mechanics.
     """
 
+    # The Function API has been available since PyTorch 0.2.0.
     class EinsumFunction(torch.autograd.Function):
 
         @staticmethod
