@@ -9,7 +9,7 @@ homepage = "https://bdusell.github.io/semiring-einsum/"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-torch = "^1.11.0"
+torch = "^1.4.0"
 
 [tool.poetry.dev-dependencies]
 sphinx = "^2.2"
