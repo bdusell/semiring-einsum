@@ -23,10 +23,18 @@ def sum_block(a, dims):
         return a
 
 def max_block(a, dims):
-    result = a
-    for dim in reversed(dims):
-        # `torch.max` has been available since PyTorch 0.1.12.
-        result = torch.max(result, dim=dim)[0]
+    return amax(a, dims)
+
+def amax(a, dim, keepdim=False):
+    """Find the maximum of a tensor over zero or more dimensions."""
+    try:
+        # PyTorch >= 1.10
+        result = torch.amax(a, dim=dim, keepdim=keepdim)
+    except AttributeError:
+        # PyTorch < 1.10
+        result = a
+        for dim in reversed(dims):
+            result = torch.max(result, dim=dim, keepdim=keepdim).values
     return result
 
 # Define the clip_inf_in_place function differently depending on the version
@@ -47,3 +55,4 @@ else:
         torch.max(a, min_float, out=a)
         max_float = a.new_tensor(finfo.max)
         torch.min(a, max_float, out=a)
+
