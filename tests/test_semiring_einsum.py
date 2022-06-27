@@ -32,6 +32,9 @@ class TestSemiringEinsum(unittest.TestCase):
         self.device = torch.device('cpu')
         self.generator = torch.manual_seed(123)
 
+    def assert_is_finite(self, tensor, message=None):
+        self.assertTrue(torch.all(torch.isfinite(tensor)).item(), message)
+
     def test_real_einsum_forward(self):
         args = [
             torch.rand(size, device=self.device, generator=self.generator)
@@ -84,6 +87,7 @@ class TestSemiringEinsum(unittest.TestCase):
             compile_equation(EQUATION_STR),
             *args,
             block_size=3)
+        numpy.testing.assert_allclose(output.detach(), expected_output.detach(), rtol=1e-6)
         loss = output.sum()
         loss.backward()
         grads = [arg.grad.clone() for arg in args]
@@ -150,6 +154,7 @@ class TestSemiringEinsum(unittest.TestCase):
             *[torch.log(arg) for arg in args],
             block_size=3)
         output = torch.exp(log_output)
+        numpy.testing.assert_allclose(output.detach(), expected_output.detach(), rtol=1e-6)
         loss = output.sum()
         loss.backward()
         grads = [arg.grad.clone() for arg in args]
@@ -167,18 +172,205 @@ class TestSemiringEinsum(unittest.TestCase):
             arg.data.uniform_(0.0, 100.0, generator=self.generator)
         # Make sure the arguments would cause exp() to overflow.
         for arg in args:
-            self.assertTrue(torch.isinf(torch.exp(arg)).sum().ne(0).item())
+            self.assertTrue(torch.any(torch.isinf(torch.exp(arg))).item())
         output = log_einsum(
             compile_equation(EQUATION_STR),
             *args,
             block_size=3)
         # The output should not have inf or nan.
-        self.assertTrue(torch.isfinite(output).prod().eq(1).item())
+        self.assert_is_finite(output)
         loss = output.sum()
         loss.backward()
         for arg in args:
             # The gradients should not have inf or nan.
-            self.assertTrue(torch.isfinite(arg.grad).prod().eq(1).item())
+            self.assert_is_finite(arg.grad)
+
+    def test_log_einsum_overflow_inf(self):
+        # Test that log einsum does return inf (not nan) when dealing
+        # with extremely large values.
+        eq = compile_equation(',->')
+        out = log_einsum(eq, torch.tensor(2e38), torch.tensor(2e38), block_size=1)
+        self.assertEqual(out.item(), math.inf)
+
+    def test_log_einsum_forward_all_neg_inf(self):
+        # Test the behavior of the forward pass of log einsum when all of the
+        # inputs are -inf. The output should be -inf.
+        args = [
+            torch.full(size, -math.inf, device=self.device)
+            for size in SIZES
+        ]
+        output = log_einsum_forward(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=3)
+        self.assertTrue(torch.equal(output, torch.full(OUTPUT_SIZE, -math.inf, device=self.device)))
+
+    def test_log_einsum_backward_all_neg_inf(self):
+        # Test the behavior of the backward pass of log einsum when all of the
+        # inputs are -inf. The gradient of logsumexp is softmax. The behavior
+        # of PyTorch's builtin logsumexp is to return NaN gradients (because
+        # the denominator of the softmax is 0).
+        args = [
+            torch.full(size, -math.inf, device=self.device)
+            for size in SIZES
+        ]
+        grad = torch.ones(OUTPUT_SIZE, device=self.device)
+        arg_grads = log_einsum_backward(
+            compile_equation(EQUATION_STR),
+            args,
+            [True for arg in args],
+            grad,
+            block_size=3)
+        for arg_grad, size in zip(arg_grads, SIZES):
+            self.assertEqual(arg_grad.size(), size)
+            self.assertTrue(torch.all(torch.isnan(arg_grad)).item(), 'gradient should be nan')
+        # Test the option that sets the gradient to 0.
+        arg_grads = log_einsum_backward(
+            compile_equation(EQUATION_STR),
+            args,
+            [True for arg in args],
+            grad,
+            block_size=3,
+            grad_of_neg_inf=0.0)
+        for arg_grad, size in zip(arg_grads, SIZES):
+            numpy.testing.assert_allclose(arg_grad, torch.zeros(size, device=self.device))
+
+    def test_grad_of_neg_inf_option(self):
+        # Test that the grad_of_neg_inf option works with log_einsnum.
+        args = [
+            torch.nn.Parameter(torch.full(size, -math.inf, device=self.device))
+            for size in SIZES
+        ]
+        output = log_einsum(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=3,
+            grad_of_neg_inf=0.0)
+        self.assertTrue(torch.equal(output, torch.full(OUTPUT_SIZE, -math.inf, device=self.device)))
+        loss = output.sum()
+        loss.backward()
+        for arg, size in zip(args, SIZES):
+            numpy.testing.assert_allclose(arg.grad, torch.zeros(size, device=self.device))
+
+    def test_log_einsum_edge_cases(self):
+        # Test the behavior of log_einsum when inputs are inf, -inf, nan, etc.
+        EQUATION_STR = 'ab,ab->a'
+        A, B = 7, 7
+        SIZES = [(A, B), (A, B)]
+        OUTPUT_SIZE = (A,)
+        args = [
+            torch.zeros(size, device=self.device)
+            for size in SIZES
+        ]
+        expected_output = torch.zeros(OUTPUT_SIZE, device=self.device)
+        expected_grads = [
+            torch.zeros(size, device=self.device)
+            for size in SIZES
+        ]
+
+        neg_inf_grad = 0.0
+
+        # 0. Set all inputs to 5.
+        for arg in args:
+            arg[0] = 5.0
+        expected_output[0] = math.log(B * math.exp(10.0))
+        for grad in expected_grads:
+            grad[0] = 1.0 / B
+
+        # 1. Set all inputs to -inf.
+        for arg in args:
+            arg[1] = -math.inf
+        expected_output[1] = -math.inf
+        for grad in expected_grads:
+            grad[1] = neg_inf_grad
+
+        # 2. Set one input to -inf, and the other to 5.
+        args[0][2] = -math.inf
+        args[1][2] = 5.0
+        expected_output[2] = -math.inf
+        for grad in expected_grads:
+            grad[2] = neg_inf_grad
+
+        # 3. All terms are -inf, but neither input is all -inf.
+        args[0][3, (0, 2, 3, 5)] = 5.0
+        args[1][3, (1, 6)] = 5.0
+        for arg in args:
+            arg[3][arg[3] != 5.0] = -math.inf
+        expected_output[3] = -math.inf
+        for grad in expected_grads:
+            grad[3] = neg_inf_grad
+
+        # 4. Only one input is -inf.
+        for arg in args:
+            arg[4] = 5.0
+        args[0][4, 3] = -math.inf
+        expected_output[4] = math.log((B-1) * math.exp(10.0))
+        for grad in expected_grads:
+            grad[4] = 1.0 / (B-1)
+            grad[4, 3] = 0.0
+
+        # 5. One input is nan.
+        for arg in args:
+            arg[5] = 5.0
+        args[0][5, 2] = math.nan
+        expected_output[5] = math.nan
+        for grad in expected_grads:
+            grad[5] = math.nan
+
+        # 6. One input is +inf.
+        for arg in args:
+            arg[6] = 5.0
+        args[1][6, 5] = math.inf
+        expected_output[6] = math.inf
+        for grad in expected_grads:
+            grad[6] = 0.0
+            # This is like inf/inf, which is nan. torch.logsumexp treats sets
+            # the gradient to nan here.
+            grad[6, 5] = math.nan
+
+        args = [torch.nn.Parameter(arg) for arg in args]
+        output = log_einsum(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=3,
+            grad_of_neg_inf=0.0
+        )
+        numpy.testing.assert_allclose(output.detach(), expected_output)
+        output.sum().backward()
+        for arg, expected_grad in zip(args, expected_grads):
+            numpy.testing.assert_allclose(arg.grad, expected_grad)
+
+    def test_log_einsum_save(self):
+        # Test that log_einsum produces the same results when the save options
+        # are used and when they are not used.
+        args = [
+            torch.nn.Parameter(torch.rand(
+                size, device=self.device, generator=self.generator))
+            for size in SIZES
+        ]
+        save_output = log_einsum(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=10,
+            save_max=False,
+            save_sumexpsub=False
+        )
+        save_output.sum().backward()
+        save_grads = [arg.grad.clone() for arg in args]
+        for arg in args:
+            arg.grad.zero_()
+        no_save_output = log_einsum(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=10,
+            save_max=True,
+            save_sumexpsub=True
+        )
+        no_save_output.sum().backward()
+        numpy.testing.assert_allclose(save_output.detach(), no_save_output.detach())
+        no_save_grads = [arg.grad.clone() for arg in args]
+        for save_grad, no_save_grad in zip(save_grads, no_save_grads):
+            numpy.testing.assert_allclose(save_grad, no_save_grad)
 
     def test_log_viterbi_einsum_forward(self):
         args = [
@@ -199,6 +391,13 @@ class TestSemiringEinsum(unittest.TestCase):
         self.assertEqual(expected_argmax.size(), (*OUTPUT_SIZE, 3))
         numpy.testing.assert_allclose(maxval, expected_maxval)
         self.assertTrue(torch.equal(argmax, expected_argmax))
+
+    def test_zero_dim(self):
+        eq = compile_equation('->')
+        ans = einsum(eq, torch.tensor(1.0), block_size=1)
+        self.assertAlmostEqual(ans.item(), 1.0)
+        ans = log_einsum(eq, torch.tensor(2.0), block_size=1)
+        self.assertAlmostEqual(ans.item(), 2.0)
 
 def reference_log_viterbi_einsum(X1, X2, X3, device):
     Y_max = []

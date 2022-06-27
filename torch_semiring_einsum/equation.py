@@ -156,7 +156,7 @@ class LookupInfo:
             index[dest_index] = var_values[source_index]
         for i in range(self.num_extra_vars):
             index.append(None)
-        return arg[index].permute(self.permutation)
+        return arg[tuple(index)].permute(self.permutation)
 
 def create_reduce_info(input_vars, output_vars):
     r"""Pre-compile a data structure that will help reduce the variables

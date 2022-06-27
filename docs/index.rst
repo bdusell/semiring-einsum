@@ -4,7 +4,7 @@ Semiring Einsum (``torch_semiring_einsum``)
 `View on GitHub <https://github.com/bdusell/semiring-einsum>`_
 
 This is a
-`PyTorch <https://pytorch.org/>`_
+`PyTorch <https://pytorch.org/>`__
 re-implementation of
 `einsum <https://pytorch.org/docs/master/generated/torch.einsum.html>`_
 that supports multiple
@@ -104,7 +104,7 @@ What is Einsum?
 The so-called "einsum" function, offered in tensor math libraries such as
 `NumPy <https://docs.scipy.org/doc/numpy/reference/generated/numpy.einsum.html>`_,
 `TensorFlow <https://www.tensorflow.org/api_docs/python/tf/einsum>`_,
-and `PyTorch <https://pytorch.org/docs/stable/torch.html#torch.einsum>`_,
+and `PyTorch <https://pytorch.org/docs/stable/torch.html#torch.einsum>`__,
 is a function that can be used to express multi-dimensional, linear
 algebraic tensor operations with a simple, concise syntax inspired by
 `Einstein summation <https://en.wikipedia.org/wiki/Einstein_notation>`_.
