@@ -60,7 +60,11 @@
 # * dockerdev_run_in_dev_stack_container
 #     Runs a command in a dev container that is part of a stack.
 
-DOCKERDEV_VERSION='0.3.2'
+# Start of include guard.
+if [[ ! ${_DOCKERDEV_INCLUDED-} ]]; then
+_DOCKERDEV_INCLUDED=1
+
+DOCKERDEV_VERSION='0.5.1'
 
 # dockerdev_container_info <container-name>
 #   Get the image name and status of a container.
@@ -92,14 +96,15 @@ _dockerdev_add_user() {
   local groupname
   userid=$(id -u "$USER") &&
   groupid=$(id -g "$USER") &&
-  groupname=$(id -gn "$USER") &&
+  # On Mac, the group name might not be valid in Linux, so we normalize it.
+  groupname=$(id -gn "$USER" | tr '[A-Z]' '[a-z]' | sed 's/[^-a-z0-9_.@]/-/g') &&
   echo "
     if addgroup --help 2>&1 | grep -i busybox > /dev/null; then
-      addgroup -g $groupid $groupname && \
-      adduser -u $userid -G $groupname -D -g '' $USER
+      addgroup -g $groupid '$groupname' && \
+      adduser -u $userid -G '$groupname' -D -g '' '$USER'
     elif addgroup --version 2>&1 | grep -F debian.org > /dev/null; then
-      addgroup --gid $groupid $groupname && \
-      adduser --uid $userid --gid $groupid --disabled-password --gecos '' $USER
+      addgroup --gid $groupid '$groupname' && \
+      adduser --uid $userid --gid $groupid --disabled-password --gecos '' '$USER'
     else
       echo 'error: Could not figure out how to add a new user.'
       false
@@ -108,65 +113,172 @@ _dockerdev_add_user() {
 }
 
 # dockerdev_start_new_dev_container <container-name> <image-name> \
-#     [<docker-run-flags>...]
+#     [--x11] [--docker] [-- <docker-run-flags>...]
 #   Start a new container with a certain image and set up a non-root user.
+#   Options:
+#   --x11     Connect the container to the X server on the host so that GUIs
+#             can be used.
+#   --docker  Connect the container to the Docker daemon on the host so that
+#             it can use the Docker client.
 dockerdev_start_new_dev_container() {
-  local container_name=$1
-  local image_name=$2
-  shift 2
-  local add_user
-  dockerdev_start_new_container "$container_name" "$image_name" -it "$@" &&
-  # Add a user matching the user on the host system, so we can write files as
-  # the same (non-root) user as the host. This allows to do things like write
-  # node_modules and lock files into a bind-mounted volume with the correct
-  # permissions. We also need to set up a home directory for the user, since
-  # some tools do not work right without one.
-  add_user=$(_dockerdev_add_user) &&
-  # Use `-u 0:0` to make sure we run as root.
-  docker exec -i -u 0:0 "$container_name" sh -c "$add_user"
+  local container_name=
+  local image_name=
+  local x11=false
+  local docker=false
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --x11) x11=true ;;
+      --docker) docker=true ;;
+      --) shift; break ;;
+      *)
+        if [[ ! $container_name ]]; then
+          container_name=$1
+        elif [[ ! $image_name ]]; then
+          image_name=$1
+        else
+          return 1
+        fi
+        ;;
+    esac
+    shift
+  done
+  # Add the docker group to the user so we have the proper permissions to run
+  # Docker-in-Docker. Only supported for Linux for now.
+  local docker_in_docker_args=() &&
+  if $docker; then
+    case "$OSTYPE" in
+      darwin*)
+        echo 'error: --docker is not implemented for MacOS' 1>&2 &&
+        return 1
+        ;;
+      *)
+        local dockergroupid
+        dockergroupid=$(getent group docker | cut -d : -f 3) &&
+        docker_in_docker_args=( \
+          --group-add "$dockergroupid" \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+        )
+        ;;
+    esac
+  fi
+  if $x11; then
+    local userid
+    local groupid
+    # Connect the container to the host's X server and make a home directory.
+    # See http://wiki.ros.org/docker/Tutorials/GUI
+    # and https://medium.com/@SaravSun/running-gui-applications-inside-docker-containers-83d65c0db110
+    userid=$(id -u "$USER") &&
+    groupid=$(id -g "$USER") &&
+    case "$OSTYPE" in
+      darwin*)
+        # On Mac, follow this tutorial:
+        # https://sourabhbajaj.com/blog/2017/02/07/gui-applications-docker-mac/
+        local ip_address &&
+        ip_address=$(ifconfig en0 | grep inet | awk '$1=="inet" {print $2}') &&
+        xhost + "$ip_address" > /dev/null &&
+        dockerdev_start_new_container "$container_name" "$image_name" -it \
+          -u "$userid":"$groupid" \
+          ${docker_in_docker_args[@]+"${docker_in_docker_args[@]}"} \
+          -e DISPLAY="$ip_address":0 \
+          -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+          "$@" &&
+        local add_user &&
+        add_user=$(_dockerdev_add_user) &&
+        docker exec -i -u 0:0 "$container_name" sh -c "$add_user"
+        ;;
+      *)
+        dockerdev_start_new_container "$container_name" "$image_name" -it \
+          -u "$userid":"$groupid" \
+          ${docker_in_docker_args[@]+"${docker_in_docker_args[@]}"} \
+          -e DISPLAY \
+          -v /etc/group:/etc/group:ro \
+          -v /etc/passwd:/etc/passwd:ro \
+          -v /etc/shadow:/etc/shadow:ro \
+          -v /etc/sudoers.d:/etc/sudoers.d:ro \
+          -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+          -v "$HOME"/.Xauthority:"$HOME"/.Xauthority:rw \
+          --net host \
+          "$@" &&
+          # See https://serverfault.com/questions/63764/create-home-directories-after-create-users/508509
+          # Use `-u 0:0` to make sure we run as root.
+          docker exec -i -u 0:0 "$container_name" sh -c "
+            cd $HOME && \
+            cp -r /etc/skel/. . && \
+            chown -R $userid:$groupid . && \
+            chmod -R go=u,go-w . && \
+            chmod go= .
+          "
+        ;;
+    esac
+  else
+    local add_user &&
+    dockerdev_start_new_container \
+      "$container_name" \
+      "$image_name" \
+      -it "$@" \
+      ${docker_in_docker_args[@]+"${docker_in_docker_args[@]}"} &&
+    # Add a user matching the user on the host system, so we can write files as
+    # the same (non-root) user as the host. This allows us to do things like
+    # write node_modules and lock files into a bind-mounted volume with the
+    # correct permissions. We also need to set up a home directory for the user,
+    # since some tools do not work right without one.
+    add_user=$(_dockerdev_add_user) &&
+    # Use `-u 0:0` to make sure we run as root.
+    docker exec -i -u 0:0 "$container_name" sh -c "$add_user"
+  fi
 }
 
-# dockerdev_ensure_container_started <image-name> [<docker-run-flags>...]
+# dockerdev_ensure_container_started <image-name> [--on-start <command>] \
+#     [-- <docker-run-flags>...]
 #   Start a container with a certain image if it is not already running.
+#   Optionally accepts the name of a command to be called just after the
+#   container is started (--on-start). It will not be called if the container
+#   is already running.
 dockerdev_ensure_container_started() {
-  dockerdev_ensure_container_started_callback : "$@"
+  _dockerdev_ensure_container_started_impl \
+    --start dockerdev_start_new_container "$@"
 }
 
-# dockerdev_ensure_container_started_callback <image-name> <function-name> \
-#     [<docker-run-flags>...]
-#   Like `dockerdev_ensure_container_started`, but accepts the name of a
-#   command to be called just after the container is started. It will not be
-#   called if the container is already running.
-dockerdev_ensure_container_started_callback() {
-  _dockerdev_ensure_container_started_impl dockerdev_start_new_container "$@"
-}
-
-# dockerdev_ensure_dev_container_started <image-name> \
-#     [<docker-run-flags>...]
+# dockerdev_ensure_dev_container_started <image-name> [--on-start <command>] \
+#     [--x11] [-- <docker-run-flags>...]
 #   Start a container with a certain image if it is not already running, and
 #   ensure that the container has a user that can write to the host system as
 #   a non-root user, which is useful when using package manager tools like NPM
 #   and Composer from inside the container. This is the function you should
 #   use to create a container for your development environment.
+#   Optionally accepts the name of a command to be called just after the
+#   container is started (--on-start). It will not be called if the container
+#   is already running.
+#   If --x11 is used, then the X server of the host will be made accessible to
+#   the container so that GUI programs can be used.
 dockerdev_ensure_dev_container_started() {
-  dockerdev_ensure_dev_container_started_callback : "$@"
+  _dockerdev_ensure_container_started_impl \
+    --start dockerdev_start_new_dev_container "$@"
 }
 
-# dockerdev_ensure_dev_container_started_callback <image-name> \
-#     <function-name> [<docker-run-flags>...]
-#   Like `dockerdev_ensure_dev_container_started`, but accepts the name of a
-#   command to be called just after the container is started. It will not be
-#   called if the container is already running.
-dockerdev_ensure_dev_container_started_callback() {
-  _dockerdev_ensure_container_started_impl dockerdev_start_new_dev_container "$@"
-}
-
+# _dockerdev_ensure_container_started_impl <image-name> [--start <command>] \
+#   [--on-start <command>] [<start-args>...] [-- <docker-run-flags>...]
 _dockerdev_ensure_container_started_impl() {
-  local start_container_cmd=$1
-  local on_start_cmd=$2
-  local image_name=$3
+  local start_container_cmd=
+  local on_start_cmd=:
+  local image_name=
+  local start_args=()
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --start) shift; start_container_cmd=$1 ;;
+      --on-start) shift; on_start_cmd=$1 ;;
+      --) break ;;
+      *)
+        if [[ ! $image_name ]]; then
+          image_name=$1
+        else
+          start_args+=("$1")
+        fi
+        ;;
+    esac
+    shift
+  done
   local container_name=$image_name
-  shift 3
   local info
   info=$(dockerdev_container_info "$container_name") &&
   if [[ $info =~ ^([^ ]+)\ (.+)$ ]]; then
@@ -196,12 +308,12 @@ _dockerdev_ensure_container_started_impl() {
       docker stop "$container_name" &&
       echo "Renaming container $container_name to $new_name" 1>&2 &&
       docker rename "$container_name" "$new_name" &&
-      $start_container_cmd "$image_name" "$container_name" "$@" &&
+      $start_container_cmd ${start_args[@]+"${start_args[@]}"} "$image_name" "$container_name" "$@" &&
       $on_start_cmd "$container_name"
     fi
   else
     # No container with the expected name exists.
-    $start_container_cmd "$image_name" "$container_name" "$@" &&
+    $start_container_cmd ${start_args[@]+"${start_args[@]}"} "$image_name" "$container_name" "$@" &&
     $on_start_cmd "$container_name"
   fi
 }
@@ -211,11 +323,18 @@ _dockerdev_ensure_container_started_impl() {
 dockerdev_run_in_container() {
   local cols
   local lines
+  local flags=i
+  # Automatically use a pseduo-TTY if stdout is a TTY. Disabling this option
+  # when stdout is not a TTY lets Docker play nice with batch submission
+  # systems.
+  if [[ -t 1 ]]; then
+    flags+=t
+  fi &&
   # COLUMNS and LINES fix an issue with terminal width.
   # See https://github.com/moby/moby/issues/33794
   cols=$(tput cols) &&
   lines=$(tput lines) &&
-  docker exec -it -e COLUMNS="$cols" -e LINES="$lines" "$@"
+  docker exec -"$flags" -e COLUMNS="$cols" -e LINES="$lines" "$@"
 }
 
 # dockerdev_run_in_dev_container <docker-exec-args>...
@@ -226,7 +345,7 @@ dockerdev_run_in_dev_container() {
   userid=$(id -u "$USER") &&
   groupid=$(id -g "$USER") &&
   # -u lets us execute the command as the host user.
-  dockerdev_run_in_container -u "$userid:$groupid" "$@"
+  dockerdev_run_in_container -u "$userid":"$groupid" "$@"
 }
 
 # dockerdev_get_service_container_name <service>
@@ -358,3 +477,6 @@ dockerdev_run_in_dev_stack_container() {
   dockerdev_ensure_dev_user_added "$container" &&
   dockerdev_run_in_dev_container "$container" "$@"
 }
+
+# End of include guard.
+fi
