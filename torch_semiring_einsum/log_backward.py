@@ -3,6 +3,7 @@ import math
 import typing
 
 import torch
+import typing_extensions
 
 from .equation import Equation, get_ranges
 from .extend import (
@@ -25,7 +26,7 @@ def log_einsum_backward(
         needs_grad: typing.Sequence[bool],
         grad: torch.Tensor,
         block_size: int,
-        grad_of_neg_inf: typing.Union[float, typing.Literal['uniform']]=math.nan,
+        grad_of_neg_inf: typing.Union[float, typing_extensions.Literal['uniform']]=math.nan,
         saved_max: typing.Optional[torch.Tensor]=None,
         saved_sumexpsub: typing.Optional[torch.Tensor]=None
     ) -> typing.List[typing.Optional[torch.Tensor]]:

@@ -40,7 +40,8 @@ else:
         # `torch.max` and `torch.min` have been available since PyTorch 0.1.12.
         # `.dtype` was introduced in PyTorch 0.4.0.
         # `.new_tensor` was introduced in PyTorch 0.4.0.
-        # `torch.finfo` was introduced in PyTorch 1.0.0.
+        # `torch.finfo().min` and `torch.finfo().max` were introduced in
+        # PyTorch 1.1.0.
         finfo = torch.finfo(a.dtype)
         min_float = a.new_tensor(finfo.min)
         torch.max(a, min_float, out=a)
