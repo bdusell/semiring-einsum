@@ -22,20 +22,20 @@ def sum_block(a, dims):
         # On the plus side, this avoids creating an unnecessary copy of `a`.
         return a
 
-def max_block(a, dims):
-    return amax(a, dims)
-
-def amax(a, dim, keepdim=False):
-    """Find the maximum of a tensor over zero or more dimensions."""
-    try:
-        # PyTorch >= 1.10
-        result = torch.amax(a, dim=dim, keepdim=keepdim)
-    except AttributeError:
-        # PyTorch < 1.10
+# Define the max_block function differently depending on the version of
+# PyTorch.
+if hasattr(torch, 'amax'):
+    def max_block(a, dims):
+        # `amax` was introduced in PyTorch 1.7.0.
+        # Unlike `max`, `amax` supports reducing multiple dimensions at once.
+        return torch.amax(a, dim=dims)
+else:
+    def max_block(a, dims):
+        # Fall back to reducing each dimension one at a time using `max`.
         result = a
         for dim in reversed(dims):
-            result = torch.max(result, dim=dim, keepdim=keepdim).values
-    return result
+            result = torch.max(result, dim=dim)[0]
+        return result
 
 # Define the clip_inf_in_place function differently depending on the version
 # of PyTorch.
