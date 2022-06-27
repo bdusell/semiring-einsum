@@ -43,13 +43,13 @@ You can install ``torch_semiring_einsum`` from PyPI using ``pip``:
 
 .. code-block:: sh
 
-   pip install torch_semiring_einsum
+   pip install torch-semiring-einsum
 
 or a package manager like `Poetry <https://python-poetry.org/>`_:
 
 .. code-block:: sh
 
-   poetry add torch_semiring_einsum
+   poetry add torch-semiring-einsum
 
 You can also install it directly from GitHub:
 
