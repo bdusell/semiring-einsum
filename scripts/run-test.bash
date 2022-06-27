@@ -1,1 +1,4 @@
-poetry run bash -c 'PYTHONPATH=$PWD:$PYTHONPATH python "$@"' -- "$@"
+set -e
+set -u
+
+PYTHONPATH=$PWD:${PYTHONPATH-} python "$@"

@@ -49,8 +49,10 @@ def viterbi_max_in_place(a, b):
     a_max, a_argmax = a
     b_max, b_argmax = b
     # Get a mask for elements where a < b.
+    # `torch.lt` has been available since PyTorch 0.1.12.
     # a_is_less : X1 x ... x Xn
     a_is_less = torch.lt(a_max, b_max)
+    # `torch.where` was introduced in PyTorch 0.4.0.
     # Replace elements in a with the new maximum.
     a_max[:] = torch.where(a_is_less, b_max, a_max)
     # Replace elements in the argmax tensor with the updated index.
@@ -75,6 +77,7 @@ def viterbi_max_block(a, dims, var_values):
     n = argmax.dim() - 1
     offset_size = [1] * n
     offset_size.append(-1)
+    # `.new_tensor` was introduced in PyTorch 0.4.0.
     offset = argmax.new_tensor([r.start for r in var_values]).view(offset_size)
     argmax.add_(offset)
     return max_values, argmax
@@ -86,6 +89,7 @@ def max_argmax_block(a, dims):
     # Iterative over dimensions in reverse so we don't need to adjust
     # the remaining dimensions after reducing each one.
     for dim in reversed(dims):
+        # `torch.max` has been available since PyTorch 0.1.12.
         # dim_max : X1 x ... x Xn x K1 x ... x Ki
         # argmaxes : m-i x [X1 x ... x Xn x K1 x ... x Ki]
         dim_max, dim_argmax = torch.max(dim_max, dim=dim)
@@ -98,7 +102,9 @@ def max_argmax_block(a, dims):
     # argmaxes : m x [X1 x ... x Xn]
     # Remember to reverse the argmaxes, since we iterated in reverse.
     argmaxes.reverse()
-    argmax = torch.stack(argmaxes, dim=-1)
+    # `torch.stack` has been available since PyTorch 0.1.12.
+    # TODO This won't work when `dims` is empty.
+    argmax = torch.stack(argmaxes, dim=argmaxes[0].dim())
     # argmax : X1 x ... x Xn x m
     return dim_max, argmax
 
