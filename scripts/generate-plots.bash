@@ -1,4 +1,5 @@
 set -e
+set -u
 
 bash scripts/run-test.bash tests/plot_cost.py \
   --type time \
