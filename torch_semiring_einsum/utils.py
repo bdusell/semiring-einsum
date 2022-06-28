@@ -28,7 +28,8 @@ if hasattr(torch, 'amax'):
     def max_block(a, dims):
         # `amax` was introduced in PyTorch 1.7.0.
         # Unlike `max`, `amax` supports reducing multiple dimensions at once.
-        return torch.amax(a, dim=dims)
+        # But `amax(dim=())` reduces all dimensions, which we override to reduce no dimensions.
+        return torch.amax(a, dim=dims) if dims else a
 else:
     def max_block(a, dims):
         # Fall back to reducing each dimension one at a time using `max`.
