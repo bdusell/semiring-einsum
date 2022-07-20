@@ -166,7 +166,9 @@ def semiring_einsum_forward_impl(equation, args, block_size, inputs,
     return reduce_in_place(add_in_place, generate_terms())
 
 def adjust_size(arg, size):
-    if arg.ndim == 0:
+    # If the input is a scalar with no dimensions to resize, just return a
+    # clone of the input (the output must always be a copy of the input).
+    if arg.dim() == 0:
         return arg.clone()
     repeat_size = []
     for output_size, arg_size in zip(size, arg.size()):
