@@ -86,8 +86,6 @@ Note that unlike in NumPy or PyTorch, equations are pre-compiled using
 :py:func:`~torch_semiring_einsum.compile_equation` rather than re-parsed from
 scratch every time einsum is called.
 
-In addition to `einsum`, the module also exposes a differentiable `log_einsum` and a non-differentiable `log_viterbi_einsum`.
-
 API Documentation
 -----------------
 
