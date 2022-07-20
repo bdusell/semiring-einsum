@@ -19,7 +19,7 @@ __all__ = [
     'log_einsum_forward',
     'log_einsum_backward',
     'log_einsum',
-    'log_viterbi_einsum',
+    'log_viterbi_einsum_forward',
     'semiring_einsum_forward',
     'combine'
 ]
