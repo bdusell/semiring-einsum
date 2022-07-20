@@ -394,11 +394,11 @@ class TestSemiringEinsum(unittest.TestCase):
 
     def test_zero_dim(self):
         eq = compile_equation('->')
-        ans = einsum(eq, torch.tensor(1.), block_size=1)
+        ans = einsum(eq, torch.tensor(1.0), block_size=1)
         self.assertAlmostEqual(ans.item(), 1.0)
-        ans = log_einsum(eq, torch.tensor(2.), block_size=1)
+        ans = log_einsum(eq, torch.tensor(2.0), block_size=1)
         self.assertAlmostEqual(ans.item(), 2.0)
-        
+
     def test_zero_dim_result(self):
         eq = compile_equation('i,i->')
         ans, _ = log_viterbi_einsum_forward(eq, torch.tensor([0.,0.]), torch.tensor([0.,0.]), block_size=1)
