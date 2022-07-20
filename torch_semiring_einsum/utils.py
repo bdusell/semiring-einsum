@@ -22,12 +22,25 @@ def sum_block(a, dims):
         # On the plus side, this avoids creating an unnecessary copy of `a`.
         return a
 
-def max_block(a, dims):
-    result = a
-    for dim in reversed(dims):
-        # `torch.max` has been available since PyTorch 0.1.12.
-        result = torch.max(result, dim=dim)[0]
-    return result
+# Define the max_block function differently depending on the version of
+# PyTorch.
+if hasattr(torch, 'amax'):
+    def max_block(a, dims):
+        # `amax` was introduced in PyTorch 1.7.0.
+        # Unlike `max`, `amax` supports reducing multiple dimensions at once.
+        # But `amax(dim=())` reduces all dimensions, which we override to
+        # reduce no dimensions. The same issue occurs with `torch.sum` above.
+        if dims:
+            return torch.amax(a, dim=dims)
+        else:
+            return a
+else:
+    def max_block(a, dims):
+        # Fall back to reducing each dimension one at a time using `max`.
+        result = a
+        for dim in reversed(dims):
+            result = torch.max(result, dim=dim)[0]
+        return result
 
 # Define the clip_inf_in_place function differently depending on the version
 # of PyTorch.
@@ -40,9 +53,11 @@ else:
         # `torch.max` and `torch.min` have been available since PyTorch 0.1.12.
         # `.dtype` was introduced in PyTorch 0.4.0.
         # `.new_tensor` was introduced in PyTorch 0.4.0.
-        # `torch.finfo` was introduced in PyTorch 1.0.0.
+        # `torch.finfo().min` and `torch.finfo().max` were introduced in
+        # PyTorch 1.1.0.
         finfo = torch.finfo(a.dtype)
         min_float = a.new_tensor(finfo.min)
         torch.max(a, min_float, out=a)
         max_float = a.new_tensor(finfo.max)
         torch.min(a, max_float, out=a)
+
