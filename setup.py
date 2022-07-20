@@ -19,9 +19,13 @@ with open('pyproject.toml') as fin:
                 pyproject[section][key] = value
 
 VERSION_RE = re.compile(r'^\^(.*)$')
-def get_version(name):
-    version_str = pyproject['tool.poetry.dependencies'][name]
-    return VERSION_RE.match(version_str).group(1)
+dependencies = []
+for package_name, version_str in sorted(pyproject['tool.poetry.dependencies'].items(), key=lambda x: x[0]):
+    version = VERSION_RE.match(version_str).group(1)
+    if package_name == 'python':
+        python_version = version
+    else:
+        dependencies.append((package_name, version))
 
 info = pyproject['tool.poetry']
 with open('README.md') as fin:
@@ -45,8 +49,6 @@ setuptools.setup(
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         'Topic :: Scientific/Engineering :: Mathematics',
     ],
-    python_requires='>=' + get_version('python'),
-    install_requires=[
-        'torch>=' + get_version('torch')
-    ]
+    python_requires='>=' + python_version,
+    install_requires=[name + '>=' + version for name, version in dependencies]
 )
