@@ -3,7 +3,11 @@ FROM python:${MIN_PYTHON_VERSION}
 ENV LC_ALL C.UTF-8
 WORKDIR /app/
 ARG MIN_PYTORCH_VERSION
-RUN pip install torch==${MIN_PYTORCH_VERSION} numpy
+ARG MIN_TYPING_EXTENSIONS_VERSION
+RUN pip install \
+        torch==${MIN_PYTORCH_VERSION} \
+        typing-extensions==${MIN_TYPING_EXTENSIONS_VERSION} \
+        numpy
 COPY torch_semiring_einsum/ ./torch_semiring_einsum
 COPY tests/ ./tests
 COPY scripts/ ./scripts
