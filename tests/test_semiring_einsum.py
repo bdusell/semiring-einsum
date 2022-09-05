@@ -392,6 +392,16 @@ class TestSemiringEinsum(unittest.TestCase):
         numpy.testing.assert_allclose(maxval, expected_maxval)
         self.assertTrue(torch.equal(argmax, expected_argmax))
 
+    def test_log_viterbi_einsum_forward2(self):
+        # When there are no summed-out variables, the returned tensor
+        # of argmaxes should have have a last dim with size zero.
+        eq = compile_equation('a,a->a')
+        x = torch.arange(5, dtype=float)
+        y = torch.arange(5, dtype=float)
+        m, am = log_viterbi_einsum_forward(eq, x, y, block_size=1)
+        self.assertEqual(m.size(), (5,))
+        self.assertEqual(am.size(), (5, 0))
+
     def test_zero_dim(self):
         eq = compile_equation('->')
         ans = einsum(eq, torch.tensor(1.0), block_size=1)
