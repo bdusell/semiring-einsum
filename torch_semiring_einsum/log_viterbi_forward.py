@@ -86,8 +86,8 @@ def max_argmax_block(a, dims):
     # a : X1 x ... x Xn x K1 x ... Km (not necessarily in this order)
     dim_max = a
     argmaxes = []
-    # Iterative over dimensions in reverse so we don't need to adjust
-    # the remaining dimensions after reducing each one.
+    # Iterate over dimensions in reverse so we don't need to adjust the
+    # remaining dimensions after reducing each one.
     for dim in reversed(dims):
         # `torch.max` has been available since PyTorch 0.1.12.
         # dim_max : X1 x ... x Xn x K1 x ... x Ki
@@ -102,8 +102,12 @@ def max_argmax_block(a, dims):
     # argmaxes : m x [X1 x ... x Xn]
     # Remember to reverse the argmaxes, since we iterated in reverse.
     argmaxes.reverse()
-    # `torch.stack` has been available since PyTorch 0.1.12.
-    argmax = torch.stack(argmaxes, dim=-1) if len(argmaxes) > 0 else torch.empty(dim_max.size() + (0,))
+    if argmaxes:
+        # `torch.stack` has been available since PyTorch 0.1.12.
+        argmax = torch.stack(argmaxes, dim=argmaxes[0].dim())
+    else:
+        # Handle the case where there are no summed variables.
+        argmax = torch.empty(dim_max.size() + (0,))
     # argmax : X1 x ... x Xn x m
     return dim_max, argmax
 
