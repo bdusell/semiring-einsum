@@ -414,6 +414,21 @@ class TestSemiringEinsum(unittest.TestCase):
         ans, _ = log_viterbi_einsum_forward(eq, torch.tensor([0.,0.]), torch.tensor([0.,0.]), block_size=1)
         self.assertAlmostEqual(ans.item(), 0.0)
 
+    def test_automatic_block_size_cuda(self):
+        device = torch.device('cuda')
+        args = [
+            torch.rand(size, device=device, generator=None)
+            for size in SIZES
+        ]
+        expected_result = torch.einsum(EQUATION_STR, *args)
+        self.assertEqual(expected_result.size(), OUTPUT_SIZE)
+        result = real_einsum_forward(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size='auto')
+        self.assertEqual(result.size(), OUTPUT_SIZE)
+        numpy.testing.assert_allclose(result, expected_result, rtol=1e-6)
+
 def reference_log_viterbi_einsum(X1, X2, X3, device):
     Y_max = []
     Y_argmax = []

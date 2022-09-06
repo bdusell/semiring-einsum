@@ -5,7 +5,7 @@ import typing
 import torch
 import typing_extensions
 
-from .equation import Equation, get_ranges
+from .equation import Equation, get_summed_variable_indexes
 from .extend import (
     semiring_einsum_forward_impl,
     reduce_in_place,
@@ -140,7 +140,6 @@ def log_einsum_backward(
     for i, arg in enumerate(args):
         if needs_grad[i]:
             reduce_info, output_lookup_info = equation.reduce_all_to_input[i]
-            var_ranges = reduce_info.get_ranges(equation, args, block_size)
 
             # In this outer loop, we need to sum over all dimensions that
             # appear in the output but not in arg i. This is due to a basic
@@ -160,7 +159,7 @@ def log_einsum_backward(
             # This loop is *not* computing the denominator of the softmax; that
             # was already done above in Z.
             def generate_terms():
-                for var_values in itertools.product(*var_ranges):
+                for var_values in reduce_info.get_summed_variable_indexes(equation, args, block_size):
 
                     # This inner loop adds tensor slices together to get a
                     # term to be used in the outer loop.

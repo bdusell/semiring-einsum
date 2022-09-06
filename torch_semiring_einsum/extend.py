@@ -1,4 +1,3 @@
-import itertools
 import typing
 
 import torch
@@ -133,10 +132,10 @@ def semiring_einsum_forward(
 def semiring_einsum_forward_impl(equation, args, block_size, inputs,
         add_in_place, sum_block, multiply_in_place, reduce_info,
         include_indexes):
-    var_ranges = reduce_info.get_ranges(equation, args, block_size)
 
     def generate_terms():
-        for var_values in itertools.product(*var_ranges):
+        for var_values in reduce_info.get_summed_variable_indexes(equation, args, block_size):
+            # var_values is a tuple of slices.
 
             def generate_factors():
                 for arg, arg_info in zip(inputs, reduce_info.lookup_info):

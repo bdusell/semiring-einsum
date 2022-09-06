@@ -111,9 +111,13 @@ class ReduceInfo:
         self.reduced_variables = reduced_variables
         self.reduced_dims = reduced_dims
 
-    def get_ranges(self, equation, args, block_size):
-        return get_ranges(equation, args, self.reduced_variables,
-            block_size)
+    def get_summed_variable_indexes(self, equation, args, block_size):
+        return get_summed_variable_indexes(
+            equation,
+            args,
+            self.reduced_variables,
+            block_size
+        )
 
     def get_term_size(self, equation, args, var_values):
         # Compute the size of each of the terms in an einsum. Each term is a
@@ -128,9 +132,22 @@ class ReduceInfo:
             [s.stop - s.start for s in var_values]
         )
 
-def get_ranges(equation, args, variables, block_size):
+def get_summed_variable_indexes(equation, args, variables, block_size):
     sizes = equation.get_sizes(args, variables)
-    return [list(generate_slices(s, block_size)) for s in sizes]
+    if isinstance(block_size, int):
+        return get_fixed_block_size_indexes(sizes, block_size)
+    elif block_size == 'auto':
+        if args:
+            device = args[0].device
+            return get_automatic_block_size_indexes(sizes, device)
+        else:
+            return []
+    else:
+        raise ValueError(f'unrecognized block_size: {block_size!r}')
+
+def get_fixed_block_size_indexes(sizes, block_size):
+    range_lists = [list(generate_slices(s, block_size)) for s in sizes]
+    return itertools.product(*range_lists)
 
 def generate_slices(total_size, block_size):
     lo = 0
@@ -138,6 +155,20 @@ def generate_slices(total_size, block_size):
         hi = min(lo + block_size, total_size)
         yield slice(lo, hi)
         lo = hi
+
+def get_automatic_block_size_indexes(sizes, device):
+    if device.type == 'cuda':
+        return get_auto_cuda_block_size_indexes(sizes, device)
+    elif device.type == 'cpu':
+        return get_auto_cpu_block_size_indexes(sizes)
+    else:
+        raise ValueError(f'unrecognized device type: {device!r}')
+
+def get_auto_cuda_block_size_indexes(sizes, device):
+    raise NotImplementedError
+
+def get_auto_cpu_block_size_indexes(sizes):
+    raise NotImplementedError
 
 _COLON = slice(None)
 
