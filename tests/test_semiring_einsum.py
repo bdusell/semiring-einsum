@@ -422,6 +422,10 @@ class TestSemiringEinsum(unittest.TestCase):
         ]
         expected_result = torch.einsum(EQUATION_STR, *args)
         self.assertEqual(expected_result.size(), OUTPUT_SIZE)
+        # Allocate a big honkin' tensor to take up some GPU memory.
+        gigabytes = 1.5
+        num_floats = int((gigabytes * (1 << 30)) // 4)
+        big_tensor = torch.empty(num_floats, device=device)
         result = real_einsum_forward(
             compile_equation(EQUATION_STR),
             *args,

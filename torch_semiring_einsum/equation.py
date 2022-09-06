@@ -1,5 +1,7 @@
 import itertools
 
+import torch
+
 class Equation:
     r"""An einsum equation that has been pre-compiled into some useful data
     structures."""
@@ -139,7 +141,9 @@ def get_summed_variable_indexes(equation, args, variables, block_size):
     elif block_size == 'auto':
         if args:
             device = args[0].device
-            return get_automatic_block_size_indexes(sizes, device)
+            # TODO Get this to work with integer types.
+            bytes_per_element = torch.finfo(args[0].dtype).bits // 8
+            return get_automatic_block_size_indexes(sizes, bytes_per_element, device)
         else:
             return []
     else:
@@ -156,18 +160,26 @@ def generate_slices(total_size, block_size):
         yield slice(lo, hi)
         lo = hi
 
-def get_automatic_block_size_indexes(sizes, device):
+def get_automatic_block_size_indexes(sizes, bytes_per_element, device):
+    available_bytes = get_available_bytes(device)
+    available_elements = available_bytes // bytes_per_element
+    assert False
+
+def get_available_bytes(device):
     if device.type == 'cuda':
-        return get_auto_cuda_block_size_indexes(sizes, device)
+        return get_available_bytes_cuda(device)
     elif device.type == 'cpu':
-        return get_auto_cpu_block_size_indexes(sizes)
+        return get_available_bytes_cpu()
     else:
         raise ValueError(f'unrecognized device type: {device!r}')
 
-def get_auto_cuda_block_size_indexes(sizes, device):
-    raise NotImplementedError
+def get_available_bytes_cuda(device):
+    free_bytes, total_bytes = torch.cuda.mem_get_info(device)
+    reserved_bytes = torch.cuda.memory_reserved(device)
+    allocated_bytes = torch.cuda.memory_allocated(device)
+    return (reserved_bytes - allocated_bytes) + free_bytes
 
-def get_auto_cpu_block_size_indexes(sizes):
+def get_available_bytes_cpu():
     raise NotImplementedError
 
 _COLON = slice(None)
