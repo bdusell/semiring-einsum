@@ -2,7 +2,7 @@ import typing
 
 import torch
 
-from .equation import Equation
+from .equation import Equation, AutomaticBlockSize, AUTOMATIC_BLOCK_SIZE
 from .extend import semiring_einsum_forward_impl
 from .utils import add_in_place, sum_block, multiply_in_place
 
@@ -11,7 +11,8 @@ def real_einsum_backward(
         args: typing.Sequence[torch.Tensor],
         needs_grad: typing.Sequence[bool],
         grad: torch.Tensor,
-        block_size: int) -> typing.List[typing.Optional[torch.Tensor]]:
+        block_size: typing.Union[int, AutomaticBlockSize]=AUTOMATIC_BLOCK_SIZE
+    ) -> typing.List[typing.Optional[torch.Tensor]]:
     r"""Compute the derivative of
     :py:func:`~torch_semiring_einsum.real_einsum_forward`.
 

@@ -2,14 +2,15 @@ import typing
 
 import torch
 
-from .equation import Equation
+from .equation import Equation, AutomaticBlockSize, AUTOMATIC_BLOCK_SIZE
 from .extend import semiring_einsum_forward
 from .utils import add_in_place
 
 def log_viterbi_einsum_forward(
         equation: Equation,
         *args: torch.Tensor,
-        block_size: int) -> typing.Tuple[torch.Tensor, torch.LongTensor]:
+        block_size: typing.Union[int, AutomaticBlockSize]=AUTOMATIC_BLOCK_SIZE
+    ) -> typing.Tuple[torch.Tensor, torch.LongTensor]:
     r"""Viterbi einsum, where addition :math:`a + b` is replaced with
     :math:`(\max(a, b), \arg \max(a, b))`, and multiplication
     :math:`a \times b` is replaced with log-space multiplication

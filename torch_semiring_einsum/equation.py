@@ -1,5 +1,6 @@
 import functools
 import itertools
+import typing
 
 import torch
 
@@ -104,10 +105,33 @@ def get_variables_not_in(variables, excluded):
     return result
 
 class AutomaticBlockSize:
+    r"""Indicates that the amount of memory used to sum elements in an einsum
+    operation should be determined automatically based on the amount of
+    available memory.
 
-    def __init__(self, mock_available_bytes=None):
+    When the device is ``cuda``, this automatically calculates the amount of
+    free GPU memory on the current device and makes the block size as big as
+    possible without exceeding it. When the device is ``cpu``, this uses the
+    value of ``max_cpu_bytes`` to determine how much memory it can use.
+    """
+
+    def __init__(self,
+            mock_available_bytes: typing.Optional[int]=None,
+            max_cpu_bytes=(1 << 30)):
+        """
+        :param mock_available_bytes: If not ``None``, ignores the amount of
+            available memory and uses this value as the number of available
+            bytes in memory instead. Mainly useful for testing.
+        :param max_cpu_bytes: The maximum amount of memory (in bytes) to use
+            when the device is ``cpu``. By default, this is set to 1 GiB.
+        """
         super().__init__()
         self.mock_available_bytes = mock_available_bytes
+        self.max_cpu_bytes = max_cpu_bytes
+
+AUTOMATIC_BLOCK_SIZE = AutomaticBlockSize()
+r"""Use this as ``block_size`` to determine block size automatically based on
+available memory."""
 
 class ReduceInfo:
     r"""Holds data structures that facilitate the basic einsum operation of
@@ -181,7 +205,7 @@ def get_automatic_block_size_indexes(equation, args, sizes, auto_block_size):
     if auto_block_size.mock_available_bytes is not None:
         available_bytes = auto_block_size.mock_available_bytes
     else:
-        available_bytes = get_available_bytes(device)
+        available_bytes = get_available_bytes(device, auto_block_size)
     bytes_per_element = get_bits_per_element(dtype) // 8
     # Figure out the number of tensor elements that will be taken up by the
     # output tensor. This will be subtracted from the total available elements.
@@ -191,11 +215,11 @@ def get_automatic_block_size_indexes(equation, args, sizes, auto_block_size):
     block_sizes = get_automatic_block_sizes(sizes, available_elements)
     return block_sizes_to_indexes(sizes, block_sizes)
 
-def get_available_bytes(device):
+def get_available_bytes(device, auto_block_size):
     if device.type == 'cuda':
         return get_available_bytes_cuda(device)
     elif device.type == 'cpu':
-        return get_available_bytes_cpu()
+        return auto_block_size.max_cpu_bytes
     else:
         raise ValueError(f'unrecognized device type: {device!r}')
 
@@ -204,9 +228,6 @@ def get_available_bytes_cuda(device):
     reserved_bytes = torch.cuda.memory_reserved(device)
     allocated_bytes = torch.cuda.memory_allocated(device)
     return (reserved_bytes - allocated_bytes) + free_bytes
-
-def get_available_bytes_cpu():
-    raise NotImplementedError
 
 def get_output_elements(equation, args):
     # Take the product of the sizes of the output dimensions.

@@ -2,12 +2,12 @@ import typing
 
 import torch
 
-from .equation import Equation
+from .equation import Equation, AutomaticBlockSize
 
 def semiring_einsum_forward(
         equation: Equation,
         args: typing.Sequence[torch.Tensor],
-        block_size: int,
+        block_size: typing.Union[int, AutomaticBlockSize],
         func: typing.Callable):
     r"""Implement a custom version of einsum using the callback ``func``.
 
