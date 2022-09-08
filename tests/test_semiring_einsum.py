@@ -12,7 +12,8 @@ from torch_semiring_einsum import (
     log_einsum_forward,
     log_einsum_backward,
     log_einsum,
-    log_viterbi_einsum_forward)
+    log_viterbi_einsum_forward,
+    AutomaticBlockSize)
 
 EQUATION_STR = 'abce,abde,abdf->acd'
 A, B, C, D, E, F = 2, 3, 5, 7, 11, 13
@@ -429,9 +430,26 @@ class TestSemiringEinsum(unittest.TestCase):
         result = real_einsum_forward(
             compile_equation(EQUATION_STR),
             *args,
-            block_size='auto')
+            block_size=AutomaticBlockSize())
         self.assertEqual(result.size(), OUTPUT_SIZE)
-        numpy.testing.assert_allclose(result, expected_result, rtol=1e-6)
+        numpy.testing.assert_allclose(result.cpu(), expected_result.cpu(), rtol=1e-6)
+
+    def test_automatic_block_size_mock(self):
+        device = self.device
+        args = [
+            torch.rand(size, device=device, generator=None)
+            for size in SIZES
+        ]
+        expected_result = torch.einsum(EQUATION_STR, *args)
+        self.assertEqual(expected_result.size(), OUTPUT_SIZE)
+        for mock_available_bytes in range(350, 1000+1, 50):
+            with self.subTest(mock_available_bytes):
+                result = real_einsum_forward(
+                    compile_equation(EQUATION_STR),
+                    *args,
+                    block_size=AutomaticBlockSize(mock_available_bytes=mock_available_bytes))
+                self.assertEqual(result.size(), OUTPUT_SIZE)
+                numpy.testing.assert_allclose(result, expected_result, rtol=1e-6)
 
 def reference_log_viterbi_einsum(X1, X2, X3, device):
     Y_max = []

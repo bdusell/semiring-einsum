@@ -1,3 +1,4 @@
+import functools
 import itertools
 
 import torch
@@ -102,6 +103,12 @@ def get_variables_not_in(variables, excluded):
             result.append(variable)
     return result
 
+class AutomaticBlockSize:
+
+    def __init__(self, mock_available_bytes=None):
+        super().__init__()
+        self.mock_available_bytes = mock_available_bytes
+
 class ReduceInfo:
     r"""Holds data structures that facilitate the basic einsum operation of
     multiplying terms together while summing over multiple dimensions."""
@@ -138,19 +145,25 @@ def get_summed_variable_indexes(equation, args, variables, block_size):
     sizes = equation.get_sizes(args, variables)
     if isinstance(block_size, int):
         return get_fixed_block_size_indexes(sizes, block_size)
-    elif block_size == 'auto':
-        if args:
-            device = args[0].device
-            # TODO Get this to work with integer types.
-            bytes_per_element = torch.finfo(args[0].dtype).bits // 8
-            return get_automatic_block_size_indexes(sizes, bytes_per_element, device)
-        else:
-            return []
+    elif isinstance(block_size, AutomaticBlockSize):
+        return get_automatic_block_size_indexes(equation, args, sizes, block_size)
     else:
         raise ValueError(f'unrecognized block_size: {block_size!r}')
 
+def get_bits_per_element(dtype):
+    try:
+        return torch.finfo(dtype).bits
+    except TypeError:
+        return torch.iinfo(dtype).bits
+
 def get_fixed_block_size_indexes(sizes, block_size):
-    range_lists = [list(generate_slices(s, block_size)) for s in sizes]
+    return block_sizes_to_indexes(sizes, (block_size for size in sizes))
+
+def block_sizes_to_indexes(sizes, block_sizes):
+    range_lists = [
+        list(generate_slices(size, block_size))
+        for size, block_size in zip(sizes, block_sizes)
+    ]
     return itertools.product(*range_lists)
 
 def generate_slices(total_size, block_size):
@@ -160,10 +173,23 @@ def generate_slices(total_size, block_size):
         yield slice(lo, hi)
         lo = hi
 
-def get_automatic_block_size_indexes(sizes, bytes_per_element, device):
-    available_bytes = get_available_bytes(device)
-    available_elements = available_bytes // bytes_per_element
-    assert False
+def get_automatic_block_size_indexes(equation, args, sizes, auto_block_size):
+    if not args:
+        return []
+    device = args[0].device
+    dtype = args[0].dtype
+    if auto_block_size.mock_available_bytes is not None:
+        available_bytes = auto_block_size.mock_available_bytes
+    else:
+        available_bytes = get_available_bytes(device)
+    bytes_per_element = get_bits_per_element(dtype) // 8
+    # Figure out the number of tensor elements that will be taken up by the
+    # output tensor. This will be subtracted from the total available elements.
+    output_elements = get_output_elements(equation, args)
+    # Figure out the total number of tensor elements that can fit in memory.
+    available_elements = available_bytes // bytes_per_element - output_elements
+    block_sizes = get_automatic_block_sizes(sizes, available_elements)
+    return block_sizes_to_indexes(sizes, block_sizes)
 
 def get_available_bytes(device):
     if device.type == 'cuda':
@@ -181,6 +207,42 @@ def get_available_bytes_cuda(device):
 
 def get_available_bytes_cpu():
     raise NotImplementedError
+
+def get_output_elements(equation, args):
+    # Take the product of the sizes of the output dimensions.
+    sizes = equation.get_sizes(args, equation.output_variables)
+    return functools.reduce(lambda a, b: a * b, sizes, 1)
+
+def get_automatic_block_sizes(sizes, available_elements):
+    if available_elements <= 0:
+        raise ValueError('no memory available to create any blocks')
+    # This is a very naive and certainly non-optimal way of finding a set of
+    # block sizes where their product is close to but does not exceed the
+    # number of available elements. It works by sorting dimensions from
+    # smallest to largest and multiplying them together until the product gets
+    # too big.
+    sorted_sizes = sorted(enumerate(sizes), key=lambda x: x[1])
+    block_sizes = [1] * len(sizes)
+    total_size = 1
+    for index, size in sorted_sizes:
+        new_total_size = total_size * size
+        if new_total_size <= available_elements:
+            # If multiplying the next dimension into the total product does
+            # not exceed the limit, multiply it in.
+            block_sizes[index] = size
+            total_size = new_total_size
+        else:
+            # Otherwise, figure out how big we can make the block size for this
+            # dimension without exceeding the total by dividing the number of
+            # available elements by the total size so far before adding this
+            # dimension.
+            new_block_size = available_elements // total_size
+            block_sizes[index] = new_block_size
+            # Since the running product can only increase, there's no reason
+            # to continue for further iterations; they would set all the
+            # remaining block sizes to 1 anyway.
+            break
+    return block_sizes
 
 _COLON = slice(None)
 
