@@ -1,10 +1,32 @@
-ARG MIN_PYTHON_VERSION
-FROM python:${MIN_PYTHON_VERSION}
+FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
 ENV LC_ALL C.UTF-8
 WORKDIR /app/
+ARG MIN_PYTHON_VERSION
 ARG MIN_PYTORCH_VERSION
 ARG MIN_TYPING_EXTENSIONS_VERSION
-RUN pip install \
+RUN apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        build-essential \
+        wget \
+        zlib1g \
+        zlib1g-dev \
+        libssl-dev \
+        && \
+    cd /tmp && \
+    rm -rf /var/lib/apt/lists/* && \
+    wget https://www.python.org/ftp/python/${MIN_PYTHON_VERSION}/Python-${MIN_PYTHON_VERSION}.tar.xz && \
+    tar xf Python-${MIN_PYTHON_VERSION}.tar.xz --xz && \
+    rm Python-${MIN_PYTHON_VERSION}.tar.xz && \
+    cd Python-${MIN_PYTHON_VERSION} && \
+    ./configure && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -r Python-${MIN_PYTHON_VERSION}
+RUN python_minor_ver=`echo ${MIN_PYTHON_VERSION} | sed 's/\.[0-9]\+$//'` && \
+    ln -sf "`which python"$python_minor_ver"`" /usr/local/bin/python && \
+    python"$python_minor_ver" -m ensurepip --upgrade && \
+    pip3 install \
         torch==${MIN_PYTORCH_VERSION} \
         typing-extensions==${MIN_TYPING_EXTENSIONS_VERSION} \
         numpy

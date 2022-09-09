@@ -7,4 +7,6 @@ made available until 1.1.0.
 
 Also, `torch_semiring_einsum` requires at least Python 3.6 because of its use
 of f-string syntax. Note that the earliest version of Python that PyTorch
-1.1.0 supports is Python 3.5.
+1.1.0 supports is Python 3.5. For Python 3.6, PyTorch requires at least 3.6.1
+because of an [ABI bug](https://github.com/pytorch/pytorch/issues/14931)
+between 3.6.0 and later.

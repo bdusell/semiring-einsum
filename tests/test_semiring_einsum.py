@@ -397,8 +397,8 @@ class TestSemiringEinsum(unittest.TestCase):
         # When there are no summed-out variables, the returned tensor
         # of argmaxes should have have a last dim with size zero.
         eq = compile_equation('a,a->a')
-        x = torch.arange(5, dtype=float)
-        y = torch.arange(5, dtype=float)
+        x = torch.arange(5, dtype=torch.float32)
+        y = torch.arange(5, dtype=torch.float32)
         m, am = log_viterbi_einsum_forward(eq, x, y, block_size=1)
         self.assertEqual(m.size(), (5,))
         self.assertEqual(am.size(), (5, 0))
@@ -418,7 +418,7 @@ class TestSemiringEinsum(unittest.TestCase):
     def test_automatic_block_size_cuda(self):
         device = torch.device('cuda')
         args = [
-            torch.rand(size, device=device, generator=None)
+            torch.rand(size, device=self.device, generator=self.generator).to(device)
             for size in SIZES
         ]
         expected_result = torch.einsum(EQUATION_STR, *args)
@@ -437,7 +437,7 @@ class TestSemiringEinsum(unittest.TestCase):
     def test_automatic_block_size_mock(self):
         device = self.device
         args = [
-            torch.rand(size, device=device, generator=None)
+            torch.rand(size, device=device, generator=self.generator)
             for size in SIZES
         ]
         expected_result = torch.einsum(EQUATION_STR, *args)
