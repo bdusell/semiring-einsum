@@ -224,7 +224,7 @@ def get_available_bytes(device, auto_block_size):
     else:
         raise ValueError(f'unrecognized device type: {device!r}')
 
-if False and hasattr(torch.cuda, 'mem_get_info'):
+if hasattr(torch.cuda, 'mem_get_info'):
     def get_cuda_free_bytes(device):
         free_bytes, total_bytes = torch.cuda.mem_get_info(device)
         return free_bytes
