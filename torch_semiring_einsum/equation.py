@@ -2,6 +2,7 @@ import functools
 import itertools
 import typing
 
+import pynvml
 import torch
 
 class Equation:
@@ -223,8 +224,19 @@ def get_available_bytes(device, auto_block_size):
     else:
         raise ValueError(f'unrecognized device type: {device!r}')
 
+if False and hasattr(torch.cuda, 'mem_get_info'):
+    def get_cuda_free_bytes(device):
+        free_bytes, total_bytes = torch.cuda.mem_get_info(device)
+        return free_bytes
+else:
+    def get_cuda_free_bytes(device):
+        pynvml.nvmlInit()
+        handle = pynvml.nvmlDeviceGetHandleByIndex(device.index)
+        info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+        return info.free
+
 def get_available_bytes_cuda(device):
-    free_bytes, total_bytes = torch.cuda.mem_get_info(device)
+    free_bytes = get_cuda_free_bytes(device)
     reserved_bytes = torch.cuda.memory_reserved(device)
     allocated_bytes = torch.cuda.memory_allocated(device)
     return (reserved_bytes - allocated_bytes) + free_bytes
