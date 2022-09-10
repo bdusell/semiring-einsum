@@ -393,7 +393,27 @@ class TestSemiringEinsum(unittest.TestCase):
         numpy.testing.assert_allclose(maxval, expected_maxval)
         self.assertTrue(torch.equal(argmax, expected_argmax))
 
-    def test_log_viterbi_einsum_forward2(self):
+    def test_log_viterbi_einsum_forward_auto_block_size(self):
+        args = [
+            torch.empty(size, device=self.device)
+            for size in SIZES
+        ]
+        for arg in args:
+            arg.uniform_(-10.0, 10.0, generator=self.generator)
+        expected_maxval, expected_argmax = reference_log_viterbi_einsum(
+            *args, self.device)
+        self.assertEqual(expected_maxval.size(), OUTPUT_SIZE)
+        self.assertEqual(expected_argmax.size(), (*OUTPUT_SIZE, 3))
+        maxval, argmax = log_viterbi_einsum_forward(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=AutomaticBlockSize(mock_available_bytes=2000))
+        self.assertEqual(expected_maxval.size(), OUTPUT_SIZE)
+        self.assertEqual(expected_argmax.size(), (*OUTPUT_SIZE, 3))
+        numpy.testing.assert_allclose(maxval, expected_maxval)
+        self.assertTrue(torch.equal(argmax, expected_argmax))
+
+    def test_log_viterbi_einsum_forward_no_summed_vars(self):
         # When there are no summed-out variables, the returned tensor
         # of argmaxes should have have a last dim with size zero.
         eq = compile_equation('a,a->a')
@@ -442,7 +462,7 @@ class TestSemiringEinsum(unittest.TestCase):
         ]
         expected_result = torch.einsum(EQUATION_STR, *args)
         self.assertEqual(expected_result.size(), OUTPUT_SIZE)
-        for mock_available_bytes in range(350, 1000+1, 50):
+        for mock_available_bytes in range(700, 2000+1, 100):
             with self.subTest(mock_available_bytes):
                 result = real_einsum_forward(
                     compile_equation(EQUATION_STR),

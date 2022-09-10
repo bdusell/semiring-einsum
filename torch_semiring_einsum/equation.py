@@ -145,13 +145,14 @@ class ReduceInfo:
         self.reduced_variables = reduced_variables
         self.reduced_dims = reduced_dims
 
-    def get_summed_variable_indexes(self, equation, args, block_size):
+    def get_summed_variable_indexes(self, equation, args, block_size,
+            output_dtypes=(None,)):
         return get_summed_variable_indexes(
             equation,
             args,
             self.reduced_variables,
-            block_size
-        )
+            block_size,
+            output_dtypes)
 
     def get_term_size(self, equation, args, var_values):
         # Compute the size of each of the terms in an einsum. Each term is a
@@ -166,12 +167,17 @@ class ReduceInfo:
             [s.stop - s.start for s in var_values]
         )
 
-def get_summed_variable_indexes(equation, args, variables, block_size):
+def get_summed_variable_indexes(equation, args, variables, block_size, output_dtypes):
     sizes = equation.get_sizes(args, variables)
     if isinstance(block_size, int):
         return get_fixed_block_size_indexes(sizes, block_size)
     elif isinstance(block_size, AutomaticBlockSize):
-        return get_automatic_block_size_indexes(equation, args, sizes, block_size)
+        return get_automatic_block_size_indexes(
+            equation,
+            args,
+            sizes,
+            block_size,
+            output_dtypes)
     else:
         raise ValueError(f'unrecognized block_size: {block_size!r}')
 
@@ -180,6 +186,9 @@ def get_bits_per_element(dtype):
         return torch.finfo(dtype).bits
     except TypeError:
         return torch.iinfo(dtype).bits
+
+def get_bytes_per_element(dtype):
+    return get_bits_per_element(dtype) // 8
 
 def get_fixed_block_size_indexes(sizes, block_size):
     return block_sizes_to_indexes(sizes, (block_size for size in sizes))
@@ -198,21 +207,30 @@ def generate_slices(total_size, block_size):
         yield slice(lo, hi)
         lo = hi
 
-def get_automatic_block_size_indexes(equation, args, sizes, auto_block_size):
+def get_automatic_block_size_indexes(equation, args, sizes, auto_block_size,
+        output_dtypes):
     if not args:
         return []
     device = args[0].device
     dtype = args[0].dtype
+    # Get the number of bytes available in memory.
     if auto_block_size.mock_available_bytes is not None:
         available_bytes = auto_block_size.mock_available_bytes
     else:
         available_bytes = get_available_bytes(device, auto_block_size)
-    bytes_per_element = get_bits_per_element(dtype) // 8
+    # Get the number of bytes per element in the block.
+    bytes_per_element = get_bytes_per_element(dtype)
     # Figure out the number of tensor elements that will be taken up by the
-    # output tensor. This will be subtracted from the total available elements.
+    # output tensor. This will be subtracted from the total available memory.
     output_elements = get_output_elements(equation, args)
+    # Get the number of bytes per element in the output.
+    actual_output_dtypes = (dtype if x is None else x for x in output_dtypes)
+    bytes_per_output_element = sum(map(get_bytes_per_element, actual_output_dtypes))
+    # Count the size of the output tensor twice: once for the final output
+    # tensor, and again for the temporary output tensor that is added to it.
+    output_bytes = 2 * bytes_per_output_element * output_elements
     # Figure out the total number of tensor elements that can fit in memory.
-    available_elements = available_bytes // bytes_per_element - output_elements
+    available_elements = (available_bytes - output_bytes) // bytes_per_element
     block_sizes = get_automatic_block_sizes(sizes, available_elements)
     return block_sizes_to_indexes(sizes, block_sizes)
 

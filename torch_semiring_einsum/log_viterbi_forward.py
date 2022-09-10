@@ -40,7 +40,8 @@ def _callback(compute_sum):
         viterbi_max_in_place,
         viterbi_max_block,
         add_in_place,
-        include_indexes=True)
+        include_indexes=True,
+        output_dtypes=(None, torch.int64))
 
 def viterbi_max_in_place(a, b):
     # a_max : X1 x ... x Xn
