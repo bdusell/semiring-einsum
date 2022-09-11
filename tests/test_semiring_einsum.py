@@ -407,7 +407,7 @@ class TestSemiringEinsum(unittest.TestCase):
         maxval, argmax = log_viterbi_einsum_forward(
             compile_equation(EQUATION_STR),
             *args,
-            block_size=AutomaticBlockSize(mock_available_bytes=2000))
+            block_size=AutomaticBlockSize(max_cpu_bytes=2000))
         self.assertEqual(expected_maxval.size(), OUTPUT_SIZE)
         self.assertEqual(expected_argmax.size(), (*OUTPUT_SIZE, 3))
         numpy.testing.assert_allclose(maxval, expected_maxval)
@@ -435,7 +435,7 @@ class TestSemiringEinsum(unittest.TestCase):
         ans, _ = log_viterbi_einsum_forward(eq, torch.tensor([0.,0.]), torch.tensor([0.,0.]), block_size=1)
         self.assertAlmostEqual(ans.item(), 0.0)
 
-    def test_automatic_block_size_cuda(self):
+    def test_automatic_block_size_cuda_no_cache(self):
         device = torch.device('cuda')
         args = [
             torch.rand(size, device=self.device, generator=self.generator).to(device)
@@ -450,9 +450,26 @@ class TestSemiringEinsum(unittest.TestCase):
         result = real_einsum_forward(
             compile_equation(EQUATION_STR),
             *args,
-            block_size=AutomaticBlockSize())
+            block_size=AutomaticBlockSize(cache_available_cuda_memory=False))
         self.assertEqual(result.size(), OUTPUT_SIZE)
         numpy.testing.assert_allclose(result.cpu(), expected_result.cpu(), rtol=1e-6)
+
+    def test_automatic_block_size_cuda_with_cache(self):
+        device = torch.device('cuda')
+        args = [
+            torch.rand(size, device=self.device, generator=self.generator).to(device)
+            for size in SIZES
+        ]
+        expected_result = torch.einsum(EQUATION_STR, *args)
+        self.assertEqual(expected_result.size(), OUTPUT_SIZE)
+        block_size = AutomaticBlockSize()
+        for i in range(3):
+            result = real_einsum_forward(
+                compile_equation(EQUATION_STR),
+                *args,
+                block_size=block_size)
+            self.assertEqual(result.size(), OUTPUT_SIZE)
+            numpy.testing.assert_allclose(result.cpu(), expected_result.cpu(), rtol=1e-6)
 
     def test_automatic_block_size_mock(self):
         device = self.device
@@ -462,12 +479,12 @@ class TestSemiringEinsum(unittest.TestCase):
         ]
         expected_result = torch.einsum(EQUATION_STR, *args)
         self.assertEqual(expected_result.size(), OUTPUT_SIZE)
-        for mock_available_bytes in range(700, 2000+1, 100):
-            with self.subTest(mock_available_bytes):
+        for max_bytes in range(700, 2000+1, 100):
+            with self.subTest(max_bytes):
                 result = real_einsum_forward(
                     compile_equation(EQUATION_STR),
                     *args,
-                    block_size=AutomaticBlockSize(mock_available_bytes=mock_available_bytes))
+                    block_size=AutomaticBlockSize(max_cpu_bytes=max_bytes))
                 self.assertEqual(result.size(), OUTPUT_SIZE)
                 numpy.testing.assert_allclose(result, expected_result, rtol=1e-6)
 

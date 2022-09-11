@@ -117,18 +117,34 @@ class AutomaticBlockSize:
     """
 
     def __init__(self,
-            mock_available_bytes: typing.Optional[int]=None,
-            max_cpu_bytes=(1 << 30)):
+            max_cpu_bytes: int=(1 << 30),
+            max_cuda_bytes: typing.Optional[int]=None,
+            cache_available_cuda_memory: bool=True,
+            cuda_memory_proportion: float=0.8):
         """
-        :param mock_available_bytes: If not ``None``, ignores the amount of
-            available memory and uses this value as the number of available
-            bytes in memory instead. Mainly useful for testing.
         :param max_cpu_bytes: The maximum amount of memory (in bytes) to use
             when the device is ``cpu``. By default, this is set to 1 GiB.
+        :param max_cuda_bytes: The maximum amount of memory (in bytes) to use
+            when the device is ``cuda``. If ``None``, then the amount of memory
+            used will be determined based on the amount of free CUDA memory.
+        :param cache_available_cuda_memory: Only applies when
+            ``max_cuda_bytes`` is ``None``. When true, the amount of available
+            CUDA memory is only queried the first time einsum is called with
+            this object as ``block_size``, and it is reused on subsequent
+            calls. This is significantly faster than querying the amount of
+            available memory every time. To account for future changes in the
+            amount of available memory, only a portion of the available memory
+            is used, as determined by ``cuda_memory_proportion``.
+        :param cuda_memory_proportion: Determines the proportion of available
+            memory used when ``cache_available_cuda_memory`` is true. This
+            should be a number between 0 and 1.
         """
         super().__init__()
-        self.mock_available_bytes = mock_available_bytes
         self.max_cpu_bytes = max_cpu_bytes
+        self.max_cuda_bytes = max_cuda_bytes
+        self.cache_available_cuda_memory = cache_available_cuda_memory
+        self.cuda_memory_proportion = cuda_memory_proportion
+        self.available_cuda_memory = {}
 
 AUTOMATIC_BLOCK_SIZE = AutomaticBlockSize()
 r"""Use this as ``block_size`` to determine block size automatically based on
@@ -214,10 +230,7 @@ def get_automatic_block_size_indexes(equation, args, sizes, auto_block_size,
     device = args[0].device
     dtype = args[0].dtype
     # Get the number of bytes available in memory.
-    if auto_block_size.mock_available_bytes is not None:
-        available_bytes = auto_block_size.mock_available_bytes
-    else:
-        available_bytes = get_available_bytes(device, auto_block_size)
+    available_bytes = get_available_bytes(device, auto_block_size)
     # Get the number of bytes per element in the block.
     bytes_per_element = get_bytes_per_element(dtype)
     # Figure out the number of tensor elements that will be taken up by the
@@ -236,11 +249,32 @@ def get_automatic_block_size_indexes(equation, args, sizes, auto_block_size,
 
 def get_available_bytes(device, auto_block_size):
     if device.type == 'cuda':
-        return get_available_bytes_cuda(device)
+        return get_available_bytes_cuda(device, auto_block_size)
     elif device.type == 'cpu':
         return auto_block_size.max_cpu_bytes
     else:
         raise ValueError(f'unrecognized device type: {device!r}')
+
+def get_available_bytes_cuda(device, auto_block_size):
+    if auto_block_size.max_cuda_bytes is not None:
+        return auto_block_size.max_cuda_bytes
+    else:
+        if auto_block_size.cache_available_cuda_memory:
+            # Cache the amount of CUDA memory available, since querying this
+            # is very slow.
+            if device.index not in auto_block_size.available_cuda_memory:
+                auto_block_size.available_cuda_memory[device.index] = round(
+                    auto_block_size.cuda_memory_proportion *
+                    get_real_available_cuda_bytes(device))
+            return auto_block_size.available_cuda_memory[device.index]
+        else:
+            return get_real_available_cuda_bytes(device)
+
+def get_real_available_cuda_bytes(device):
+    free_bytes = get_cuda_free_bytes(device)
+    reserved_bytes = torch.cuda.memory_reserved(device)
+    allocated_bytes = torch.cuda.memory_allocated(device)
+    return (reserved_bytes - allocated_bytes) + free_bytes
 
 if hasattr(torch.cuda, 'mem_get_info'):
     def get_cuda_free_bytes(device):
@@ -252,12 +286,6 @@ else:
         handle = pynvml.nvmlDeviceGetHandleByIndex(device.index)
         info = pynvml.nvmlDeviceGetMemoryInfo(handle)
         return info.free
-
-def get_available_bytes_cuda(device):
-    free_bytes = get_cuda_free_bytes(device)
-    reserved_bytes = torch.cuda.memory_reserved(device)
-    allocated_bytes = torch.cuda.memory_allocated(device)
-    return (reserved_bytes - allocated_bytes) + free_bytes
 
 def get_output_elements(equation, args):
     # Take the product of the sizes of the output dimensions.
