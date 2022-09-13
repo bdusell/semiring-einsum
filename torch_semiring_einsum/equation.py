@@ -128,12 +128,14 @@ class AutomaticBlockSize:
         :param max_cuda_bytes: The maximum amount of memory (in bytes) to use
             when the device is ``cuda``. If ``None``, then the amount of memory
             used will be determined based on the amount of free CUDA memory.
+            Note that specifying an explicit memory limit is much faster than
+            querying the amount of free CUDA memory.
         :param cache_available_cuda_memory: Only applies when
             ``max_cuda_bytes`` is ``None``. When true, the amount of available
             CUDA memory is only queried the first time einsum is called with
             this object as ``block_size``, and it is reused on subsequent
             calls. This is significantly faster than querying the amount of
-            available memory every time. To account for future changes in the
+            available memory every time. To account for future decreases in the
             amount of available memory, only a portion of the available memory
             is used, as determined by ``cuda_memory_proportion``.
         :param cuda_memory_proportion: Determines the proportion of available
@@ -155,9 +157,6 @@ class AutomaticBlockSize:
             return super().__repr__()
 
 AUTOMATIC_BLOCK_SIZE = AutomaticBlockSize(repr_string='AUTOMATIC_BLOCK_SIZE')
-r"""Use this as ``block_size`` to determine block size automatically based on
-available memory, according to the default arguments for
-:py:func:`AutomaticBlockSize.__init__`."""
 
 class ReduceInfo:
     r"""Holds data structures that facilitate the basic einsum operation of

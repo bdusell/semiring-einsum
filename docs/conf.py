@@ -82,3 +82,4 @@ autodoc_default_options = {
     'members' : True,
     'imported-members' : True
 }
+autodoc_class_signature = 'separated'
