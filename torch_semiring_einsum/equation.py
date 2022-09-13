@@ -120,7 +120,8 @@ class AutomaticBlockSize:
             max_cpu_bytes: int=(1 << 30),
             max_cuda_bytes: typing.Optional[int]=None,
             cache_available_cuda_memory: bool=True,
-            cuda_memory_proportion: float=0.8):
+            cuda_memory_proportion: float=0.8,
+            repr_string=None):
         """
         :param max_cpu_bytes: The maximum amount of memory (in bytes) to use
             when the device is ``cpu``. By default, this is set to 1 GiB.
@@ -145,10 +146,18 @@ class AutomaticBlockSize:
         self.cache_available_cuda_memory = cache_available_cuda_memory
         self.cuda_memory_proportion = cuda_memory_proportion
         self.available_cuda_memory = {}
+        self.repr_string = repr_string
 
-AUTOMATIC_BLOCK_SIZE = AutomaticBlockSize()
+    def __repr__(self):
+        if self.repr_string is not None:
+            return self.repr_string
+        else:
+            return super().__repr__()
+
+AUTOMATIC_BLOCK_SIZE = AutomaticBlockSize(repr_string='AUTOMATIC_BLOCK_SIZE')
 r"""Use this as ``block_size`` to determine block size automatically based on
-available memory."""
+available memory, according to the default arguments for
+:py:func:`AutomaticBlockSize.__init__`."""
 
 class ReduceInfo:
     r"""Holds data structures that facilitate the basic einsum operation of

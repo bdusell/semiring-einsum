@@ -1,6 +1,6 @@
 import torch
 
-from .equation import compile_equation, AutomaticBlockSize
+from .equation import compile_equation, AutomaticBlockSize, AUTOMATIC_BLOCK_SIZE
 from .extend import semiring_einsum_forward
 from .function import combine
 from .real_forward import real_einsum_forward
@@ -13,13 +13,15 @@ from .log_viterbi_forward import log_viterbi_einsum_forward
 
 __all__ = [
     'compile_equation',
-    'real_einsum_forward',
-    'real_einsum_backward',
     'einsum',
-    'log_einsum_forward',
-    'log_einsum_backward',
     'log_einsum',
     'log_viterbi_einsum_forward',
+    'AUTOMATIC_BLOCK_SIZE',
+    'AutomaticBlockSize',
+    'real_einsum_forward',
+    'real_einsum_backward',
+    'log_einsum_forward',
+    'log_einsum_backward',
     'semiring_einsum_forward',
     'combine'
 ]
