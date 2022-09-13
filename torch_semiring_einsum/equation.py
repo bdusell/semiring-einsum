@@ -281,10 +281,18 @@ def get_available_bytes_cuda(device, auto_block_size):
 
 def get_real_available_cuda_bytes(device):
     free_bytes = get_cuda_free_bytes(device)
-    reserved_bytes = torch.cuda.memory_reserved(device)
+    reserved_bytes = get_cuda_memory_reserved(device)
     allocated_bytes = torch.cuda.memory_allocated(device)
     return (reserved_bytes - allocated_bytes) + free_bytes
 
+# torch.cuda.memory_cached was renamed to torch.cuda.memory_reserved in
+# PyTorch 1.4.0.
+if hasattr(torch.cuda, 'memory_reserved'):
+    get_cuda_memory_reserved = torch.cuda.memory_reserved
+else:
+    get_cuda_memory_reserved = torch.cuda.memory_cached
+
+# torch.cuda.mem_get_info was introduced in PyTorch 1.11.0.
 if hasattr(torch.cuda, 'mem_get_info'):
     def get_cuda_free_bytes(device):
         free_bytes, total_bytes = torch.cuda.mem_get_info(device)
