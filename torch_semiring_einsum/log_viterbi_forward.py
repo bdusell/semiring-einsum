@@ -35,13 +35,15 @@ def log_viterbi_einsum_forward(
     """
     return semiring_einsum_forward(equation, args, block_size, _callback)
 
+ARGMAX_DTYPE = torch.int64
+
 def _callback(compute_sum):
     return compute_sum(
         viterbi_max_in_place,
         viterbi_max_block,
         add_in_place,
         include_indexes=True,
-        output_dtypes=(None, torch.int64))
+        output_dtypes=(None, ARGMAX_DTYPE))
 
 def viterbi_max_in_place(a, b):
     # a_max : X1 x ... x Xn
@@ -109,7 +111,8 @@ def max_argmax_block(a, dims):
         argmax = torch.stack(argmaxes, dim=argmaxes[0].dim())
     else:
         # Handle the case where there are no summed variables.
-        argmax = torch.empty(dim_max.size() + (0,))
+        # `torch.empty` has been available since PyTorch 0.4.0.
+        argmax = torch.empty(dim_max.size() + (0,), dtype=ARGMAX_DTYPE, device=a.device)
     # argmax : X1 x ... x Xn x m
     return dim_max, argmax
 
