@@ -1,8 +1,9 @@
 import math
+import typing
 
 import torch
 
-from .equation import Equation
+from .equation import Equation, AutomaticBlockSize, AUTOMATIC_BLOCK_SIZE
 from .log_forward import log_einsum_forward
 from .log_backward import log_einsum_backward
 
@@ -67,7 +68,7 @@ class LogEinsumFunction(torch.autograd.Function):
 def log_einsum(
         equation: Equation,
         *args: torch.Tensor,
-        block_size: int,
+        block_size: typing.Union[int, AutomaticBlockSize]=AUTOMATIC_BLOCK_SIZE,
         save_max: bool=True,
         save_sumexpsub: bool=True,
         grad_of_neg_inf=math.nan

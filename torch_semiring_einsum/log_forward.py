@@ -2,7 +2,7 @@ import typing
 
 import torch
 
-from .equation import Equation
+from .equation import Equation, AutomaticBlockSize, AUTOMATIC_BLOCK_SIZE
 from .extend import (
     semiring_einsum_forward,
     semiring_einsum_forward_impl
@@ -18,7 +18,7 @@ from .utils import (
 def log_einsum_forward(
         equation: Equation,
         *args: torch.Tensor,
-        block_size: int,
+        block_size: typing.Union[int, AutomaticBlockSize]=AUTOMATIC_BLOCK_SIZE,
         return_max: bool=False,
         return_sumexpsub: bool=False
     ) -> typing.Union[torch.Tensor, typing.Tuple[torch.Tensor]]:

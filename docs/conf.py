@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'Semiring Einsum'
-copyright = '2019, Brian DuSell'
+copyright = '2019-2022, Brian DuSell'
 author = 'Brian DuSell'
 
 
@@ -49,6 +49,15 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # a list of builtin themes.
 #
 html_theme = 'alabaster'
+html_theme_options = {
+    'description' : 'Extensible PyTorch implementation of einsum that supports multiple semirings',
+    'fixed_sidebar' : True,
+    'logo' : 'logo.svg',
+    'logo_name': True,
+    'github_button': True,
+    'github_repo' : 'semiring-einsum',
+    'github_user' : 'bdusell'
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -62,5 +71,15 @@ intersphinx_mapping = {
     'pytorch' : ('https://pytorch.org/docs/stable', None)
 }
 
-html_logo = 'logo.svg'
 html_favicon = 'logo.svg'
+
+# For the sphinxcontrib-bibtex extension
+bibtex_bibfiles = ['references.bib']
+
+# For the ordering of autodoc-generated documentation.
+autodoc_default_options = {
+    'member-order' : 'bysource',
+    'members' : True,
+    'imported-members' : True
+}
+autodoc_class_signature = 'separated'

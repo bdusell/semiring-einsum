@@ -1,14 +1,13 @@
-import itertools
 import typing
 
 import torch
 
-from .equation import Equation
+from .equation import Equation, AutomaticBlockSize
 
 def semiring_einsum_forward(
         equation: Equation,
         args: typing.Sequence[torch.Tensor],
-        block_size: int,
+        block_size: typing.Union[int, AutomaticBlockSize],
         func: typing.Callable):
     r"""Implement a custom version of einsum using the callback ``func``.
 
@@ -67,7 +66,7 @@ def semiring_einsum_forward(
 
     The full signature of ``compute_sum`` is
     ``compute_sum(add_in_place, sum_block, multiply_in_place,
-    include_indexes=False)``.
+    include_indexes=False, output_dtypes=(None,))``.
     The ``+`` and ``*`` operators are customized using ``add_in_place``,
     ``sum_block``, and ``multiply_in_place``.
 
@@ -101,6 +100,16 @@ def semiring_einsum_forward(
     entry for each summed variable, in order of first appearance in the
     equation.
 
+    The optional argument ``output_dtypes`` should be a list of PyTorch dtypes
+    that represents the components of the output tensor. It is used to
+    calculate the memory required by the output tensor when performing
+    automatic block sizing. In most cases, the output tensor simply has the
+    same dtype as the input tensor. In some cases, like Viterbi, the output
+    tensor has multiple components (e.g. a tensor of floats for the max and a
+    tensor of ints for the argmax). A dtype of ``None`` can be used to indicate
+    the same dtype as the input tensors. The default value for
+    ``output_dtypes`` is ``(None,)``.
+
     :param equation: A pre-compiled equation.
     :param args: A list of input tensors.
     :param block_size: To keep memory usage in check, the einsum summation is
@@ -116,7 +125,7 @@ def semiring_einsum_forward(
     equation.prepare_for_forward()
 
     def compute_sum(add_in_place, sum_block, multiply_in_place,
-            include_indexes=False):
+            include_indexes=False, output_dtypes=(None,)):
         return semiring_einsum_forward_impl(
             equation,
             args,
@@ -126,20 +135,26 @@ def semiring_einsum_forward(
             sum_block,
             multiply_in_place,
             equation.reduce_input_to_output,
-            include_indexes)
+            include_indexes,
+            output_dtypes)
 
     return func(compute_sum)
 
 def semiring_einsum_forward_impl(equation, args, block_size, inputs,
         add_in_place, sum_block, multiply_in_place, reduce_info,
-        include_indexes):
-    var_ranges = reduce_info.get_ranges(equation, args, block_size)
+        include_indexes, output_dtypes=(None,)):
 
     inputs_viewed = [arg_info.view(arg)
                      for arg, arg_info in zip(inputs, reduce_info.lookup_info)]
 
     def generate_terms():
-        for var_values in itertools.product(*var_ranges):
+        summed_variable_indexes = reduce_info.get_summed_variable_indexes(
+            equation,
+            args,
+            block_size,
+            output_dtypes)
+        for var_values in summed_variable_indexes:
+            # var_values is a tuple of slices.
 
             def generate_factors():
                 for argv, arg_info in zip(inputs_viewed, reduce_info.lookup_info):

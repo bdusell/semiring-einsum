@@ -1,13 +1,16 @@
+import typing
+
 import torch
 
-from .equation import Equation
+from .equation import Equation, AutomaticBlockSize, AUTOMATIC_BLOCK_SIZE
 from .extend import semiring_einsum_forward
 from .utils import add_in_place, sum_block, multiply_in_place
 
 def real_einsum_forward(
         equation: Equation,
         *args: torch.Tensor,
-        block_size : int) -> torch.Tensor:
+        block_size: typing.Union[int, AutomaticBlockSize]=AUTOMATIC_BLOCK_SIZE
+    ) -> torch.Tensor:
     r"""Einsum where addition and multiplication have their usual meanings.
 
     This function has different memory and runtime characteristics than

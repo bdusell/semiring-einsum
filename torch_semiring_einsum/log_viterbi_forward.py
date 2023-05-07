@@ -2,14 +2,15 @@ import typing
 
 import torch
 
-from .equation import Equation
+from .equation import Equation, AutomaticBlockSize, AUTOMATIC_BLOCK_SIZE
 from .extend import semiring_einsum_forward
 from .utils import add_in_place
 
 def log_viterbi_einsum_forward(
         equation: Equation,
         *args: torch.Tensor,
-        block_size: int) -> typing.Tuple[torch.Tensor, torch.LongTensor]:
+        block_size: typing.Union[int, AutomaticBlockSize]=AUTOMATIC_BLOCK_SIZE
+    ) -> typing.Tuple[torch.Tensor, torch.LongTensor]:
     r"""Viterbi einsum, where addition :math:`a + b` is replaced with
     :math:`(\max(a, b), \arg \max(a, b))`, and multiplication
     :math:`a \times b` is replaced with log-space multiplication
@@ -34,12 +35,15 @@ def log_viterbi_einsum_forward(
     """
     return semiring_einsum_forward(equation, args, block_size, _callback)
 
+ARGMAX_DTYPE = torch.int64
+
 def _callback(compute_sum):
     return compute_sum(
         viterbi_max_in_place,
         viterbi_max_block,
         add_in_place,
-        include_indexes=True)
+        include_indexes=True,
+        output_dtypes=(None, ARGMAX_DTYPE))
 
 def viterbi_max_in_place(a, b):
     # a_max : X1 x ... x Xn
@@ -54,10 +58,10 @@ def viterbi_max_in_place(a, b):
     a_is_less = torch.lt(a_max, b_max)
     # `torch.where` was introduced in PyTorch 0.4.0.
     # Replace elements in a with the new maximum.
-    a_max[:] = torch.where(a_is_less, b_max, a_max)
+    a_max[...] = torch.where(a_is_less, b_max, a_max)
     # Replace elements in the argmax tensor with the updated index.
     # Unfortunately there is no in-place version of where() (yet).
-    a_argmax[:] = torch.where(
+    a_argmax[...] = torch.where(
         a_is_less.unsqueeze(-1),
         b_argmax,
         a_argmax)
@@ -86,8 +90,8 @@ def max_argmax_block(a, dims):
     # a : X1 x ... x Xn x K1 x ... Km (not necessarily in this order)
     dim_max = a
     argmaxes = []
-    # Iterative over dimensions in reverse so we don't need to adjust
-    # the remaining dimensions after reducing each one.
+    # Iterate over dimensions in reverse so we don't need to adjust the
+    # remaining dimensions after reducing each one.
     for dim in reversed(dims):
         # `torch.max` has been available since PyTorch 0.1.12.
         # dim_max : X1 x ... x Xn x K1 x ... x Ki
@@ -102,9 +106,13 @@ def max_argmax_block(a, dims):
     # argmaxes : m x [X1 x ... x Xn]
     # Remember to reverse the argmaxes, since we iterated in reverse.
     argmaxes.reverse()
-    # `torch.stack` has been available since PyTorch 0.1.12.
-    # TODO This won't work when `dims` is empty.
-    argmax = torch.stack(argmaxes, dim=argmaxes[0].dim())
+    if argmaxes:
+        # `torch.stack` has been available since PyTorch 0.1.12.
+        argmax = torch.stack(argmaxes, dim=argmaxes[0].dim())
+    else:
+        # Handle the case where there are no summed variables.
+        # `torch.empty` has been available since PyTorch 0.4.0.
+        argmax = torch.empty(dim_max.size() + (0,), dtype=ARGMAX_DTYPE, device=a.device)
     # argmax : X1 x ... x Xn x m
     return dim_max, argmax
 

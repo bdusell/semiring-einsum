@@ -6,6 +6,7 @@ from .real_backward import real_einsum_backward
 # when needs_grad is false for other args.
 
 einsum = combine(real_einsum_forward, real_einsum_backward)
+einsum.__doc__ = \
 r"""Differentiable version of ordinary (real) einsum.
 
 This combines :py:func:`real_einsum_forward` and

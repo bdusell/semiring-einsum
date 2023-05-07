@@ -12,7 +12,8 @@ from torch_semiring_einsum import (
     log_einsum_forward,
     log_einsum_backward,
     log_einsum,
-    log_viterbi_einsum_forward)
+    log_viterbi_einsum_forward,
+    AutomaticBlockSize)
 
 EQUATION_STR = 'abce,abde,abdf->acd'
 A, B, C, D, E, F = 2, 3, 5, 7, 11, 13
@@ -392,12 +393,100 @@ class TestSemiringEinsum(unittest.TestCase):
         numpy.testing.assert_allclose(maxval, expected_maxval)
         self.assertTrue(torch.equal(argmax, expected_argmax))
 
+    def test_log_viterbi_einsum_forward_auto_block_size(self):
+        args = [
+            torch.empty(size, device=self.device)
+            for size in SIZES
+        ]
+        for arg in args:
+            arg.uniform_(-10.0, 10.0, generator=self.generator)
+        expected_maxval, expected_argmax = reference_log_viterbi_einsum(
+            *args, self.device)
+        self.assertEqual(expected_maxval.size(), OUTPUT_SIZE)
+        self.assertEqual(expected_argmax.size(), (*OUTPUT_SIZE, 3))
+        maxval, argmax = log_viterbi_einsum_forward(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=AutomaticBlockSize(max_cpu_bytes=2000))
+        self.assertEqual(expected_maxval.size(), OUTPUT_SIZE)
+        self.assertEqual(expected_argmax.size(), (*OUTPUT_SIZE, 3))
+        numpy.testing.assert_allclose(maxval, expected_maxval)
+        self.assertTrue(torch.equal(argmax, expected_argmax))
+
+    def test_log_viterbi_einsum_forward_no_summed_vars(self):
+        # When there are no summed-out variables, the returned tensor
+        # of argmaxes should have have a last dim with size zero.
+        eq = compile_equation('a,a->a')
+        x = torch.arange(5, dtype=torch.float32)
+        y = torch.arange(5, dtype=torch.float32)
+        m, am = log_viterbi_einsum_forward(eq, x, y, block_size=1)
+        self.assertEqual(m.size(), (5,))
+        self.assertEqual(am.size(), (5, 0))
+
     def test_zero_dim(self):
         eq = compile_equation('->')
         ans = einsum(eq, torch.tensor(1.0), block_size=1)
         self.assertAlmostEqual(ans.item(), 1.0)
         ans = log_einsum(eq, torch.tensor(2.0), block_size=1)
         self.assertAlmostEqual(ans.item(), 2.0)
+
+    def test_zero_dim_result(self):
+        eq = compile_equation('i,i->')
+        ans, _ = log_viterbi_einsum_forward(eq, torch.tensor([0.,0.]), torch.tensor([0.,0.]), block_size=1)
+        self.assertAlmostEqual(ans.item(), 0.0)
+
+    def test_automatic_block_size_cuda_no_cache(self):
+        device = torch.device('cuda')
+        args = [
+            torch.rand(size, device=self.device, generator=self.generator).to(device)
+            for size in SIZES
+        ]
+        expected_result = torch.einsum(EQUATION_STR, *args)
+        self.assertEqual(expected_result.size(), OUTPUT_SIZE)
+        # Allocate a big honkin' tensor to take up some GPU memory.
+        gigabytes = 1.5
+        num_floats = int((gigabytes * (1 << 30)) // 4)
+        big_tensor = torch.empty(num_floats, device=device)
+        result = real_einsum_forward(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=AutomaticBlockSize(cache_available_cuda_memory=False))
+        self.assertEqual(result.size(), OUTPUT_SIZE)
+        numpy.testing.assert_allclose(result.cpu(), expected_result.cpu(), rtol=1e-6)
+
+    def test_automatic_block_size_cuda_with_cache(self):
+        device = torch.device('cuda')
+        args = [
+            torch.rand(size, device=self.device, generator=self.generator).to(device)
+            for size in SIZES
+        ]
+        expected_result = torch.einsum(EQUATION_STR, *args)
+        self.assertEqual(expected_result.size(), OUTPUT_SIZE)
+        block_size = AutomaticBlockSize()
+        for i in range(3):
+            result = real_einsum_forward(
+                compile_equation(EQUATION_STR),
+                *args,
+                block_size=block_size)
+            self.assertEqual(result.size(), OUTPUT_SIZE)
+            numpy.testing.assert_allclose(result.cpu(), expected_result.cpu(), rtol=1e-6)
+
+    def test_automatic_block_size_mock(self):
+        device = self.device
+        args = [
+            torch.rand(size, device=device, generator=self.generator)
+            for size in SIZES
+        ]
+        expected_result = torch.einsum(EQUATION_STR, *args)
+        self.assertEqual(expected_result.size(), OUTPUT_SIZE)
+        for max_bytes in range(700, 2000+1, 100):
+            with self.subTest(max_bytes):
+                result = real_einsum_forward(
+                    compile_equation(EQUATION_STR),
+                    *args,
+                    block_size=AutomaticBlockSize(max_cpu_bytes=max_bytes))
+                self.assertEqual(result.size(), OUTPUT_SIZE)
+                numpy.testing.assert_allclose(result, expected_result, rtol=1e-6)
 
 def reference_log_viterbi_einsum(X1, X2, X3, device):
     Y_max = []

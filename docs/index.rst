@@ -16,19 +16,21 @@ makes the memory-execution time tradeoff configurable, allowing you to run
 large einsum operations that might otherwise be impossible given typical
 hardware constraints.
 
-This einsum implementation was specifically designed to be memory-efficient.
-Whereas a naive implementation of einsum could easily consume huge amounts of
-memory, this implementation has a very conservative memory footprint. It
-performs summations in-place and in fixed-size blocks in order to force an
-upper bound on memory usage, at the cost of some parallelism. However, the
-percentage of memory saved is typically much greater than the percentage of
-speed lost. This einsum implementation allows you to set the block size and
-tune the tradeoff between memory and speed.
+This einsum implementation was specifically designed to be memory-efficient,
+particularly on einsum operations over more than two inputs. Whereas a
+naive implementation of einsum could easily consume huge amounts of memory,
+this implementation has a very conservative memory footprint. It performs
+summations in-place and in fixed-size blocks in order to enforce an upper
+bound on memory usage. This reduces the amount of parallelism in the
+summation, but with the right block size, it is still very fast. By default,
+a block size is automatically chosen based on available GPU memory (on CPU, it
+chooses a block size that does not exceed 1 GiB). You can also set the block
+size yourself to tune the tradeoff between memory and speed.
 
-In some cases, this einsum implementation has even better space complexity
-than the built-in :py:func:`torch.einsum` function, because it does not need
-to create intermediate tensors whose sizes are proportional to the dimensions
-being summed over.
+In some cases with more than two inputs, this einsum implementation has even
+better space complexity than the built-in :py:func:`torch.einsum` function,
+because it does not need to create intermediate tensors whose sizes are
+proportional to the dimensions being summed over.
 
 .. toctree::
    :maxdepth: 2
@@ -78,7 +80,7 @@ space:
    A = torch.log(torch.rand(10, 3, 5, requires_grad=True))
    B = torch.log(torch.rand(10, 5, 7, requires_grad=True))
    # Run einsum.
-   C = torch_semiring_einsum.log_einsum(EQUATION, A, B, block_size=5)
+   C = torch_semiring_einsum.log_einsum(EQUATION, A, B)
    # Now C is differentiable.
    C.sum().backward()
 

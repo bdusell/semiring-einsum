@@ -1,4 +1,9 @@
+import functools
 import itertools
+import typing
+
+import pynvml
+import torch
 
 class Equation:
     r"""An einsum equation that has been pre-compiled into some useful data
@@ -100,6 +105,59 @@ def get_variables_not_in(variables, excluded):
             result.append(variable)
     return result
 
+class AutomaticBlockSize:
+    r"""Indicates that the amount of memory used to sum elements in an einsum
+    operation should be determined automatically based on the amount of
+    available memory.
+
+    When the device is ``cuda``, this automatically calculates the amount of
+    free GPU memory on the current device and makes the block size as big as
+    possible without exceeding it. When the device is ``cpu``, this uses the
+    value of ``max_cpu_bytes`` to determine how much memory it can use.
+    """
+
+    def __init__(self,
+            max_cpu_bytes: int=(1 << 30),
+            max_cuda_bytes: typing.Optional[int]=None,
+            cache_available_cuda_memory: bool=True,
+            cuda_memory_proportion: float=0.8,
+            repr_string=None):
+        """
+        :param max_cpu_bytes: The maximum amount of memory (in bytes) to use
+            when the device is ``cpu``. By default, this is set to 1 GiB.
+        :param max_cuda_bytes: The maximum amount of memory (in bytes) to use
+            when the device is ``cuda``. If ``None``, then the amount of memory
+            used will be determined based on the amount of free CUDA memory.
+            Note that specifying an explicit memory limit is much faster than
+            querying the amount of free CUDA memory.
+        :param cache_available_cuda_memory: Only applies when
+            ``max_cuda_bytes`` is ``None``. When true, the amount of available
+            CUDA memory is only queried the first time einsum is called with
+            this object as ``block_size``, and it is reused on subsequent
+            calls. This is significantly faster than querying the amount of
+            available memory every time. To account for future decreases in the
+            amount of available memory, only a portion of the available memory
+            is used, as determined by ``cuda_memory_proportion``.
+        :param cuda_memory_proportion: Determines the proportion of available
+            memory used when ``cache_available_cuda_memory`` is true. This
+            should be a number between 0 and 1.
+        """
+        super().__init__()
+        self.max_cpu_bytes = max_cpu_bytes
+        self.max_cuda_bytes = max_cuda_bytes
+        self.cache_available_cuda_memory = cache_available_cuda_memory
+        self.cuda_memory_proportion = cuda_memory_proportion
+        self.available_cuda_memory = {}
+        self.repr_string = repr_string
+
+    def __repr__(self):
+        if self.repr_string is not None:
+            return self.repr_string
+        else:
+            return super().__repr__()
+
+AUTOMATIC_BLOCK_SIZE = AutomaticBlockSize(repr_string='AUTOMATIC_BLOCK_SIZE')
+
 class ReduceInfo:
     r"""Holds data structures that facilitate the basic einsum operation of
     multiplying terms together while summing over multiple dimensions."""
@@ -111,9 +169,14 @@ class ReduceInfo:
         self.reduced_variables = reduced_variables
         self.reduced_dims = reduced_dims
 
-    def get_ranges(self, equation, args, block_size):
-        return get_ranges(equation, args, self.reduced_variables,
-            block_size)
+    def get_summed_variable_indexes(self, equation, args, block_size,
+            output_dtypes=(None,)):
+        return get_summed_variable_indexes(
+            equation,
+            args,
+            self.reduced_variables,
+            block_size,
+            output_dtypes)
 
     def get_term_size(self, equation, args, var_values):
         # Compute the size of each of the terms in an einsum. Each term is a
@@ -128,9 +191,38 @@ class ReduceInfo:
             [s.stop - s.start for s in var_values]
         )
 
-def get_ranges(equation, args, variables, block_size):
+def get_summed_variable_indexes(equation, args, variables, block_size, output_dtypes):
     sizes = equation.get_sizes(args, variables)
-    return [list(generate_slices(s, block_size)) for s in sizes]
+    if isinstance(block_size, int):
+        return get_fixed_block_size_indexes(sizes, block_size)
+    elif isinstance(block_size, AutomaticBlockSize):
+        return get_automatic_block_size_indexes(
+            equation,
+            args,
+            sizes,
+            block_size,
+            output_dtypes)
+    else:
+        raise ValueError(f'unrecognized block_size: {block_size!r}')
+
+def get_bits_per_element(dtype):
+    try:
+        return torch.finfo(dtype).bits
+    except TypeError:
+        return torch.iinfo(dtype).bits
+
+def get_bytes_per_element(dtype):
+    return get_bits_per_element(dtype) // 8
+
+def get_fixed_block_size_indexes(sizes, block_size):
+    return block_sizes_to_indexes(sizes, (block_size for size in sizes))
+
+def block_sizes_to_indexes(sizes, block_sizes):
+    range_lists = [
+        list(generate_slices(size, block_size))
+        for size, block_size in zip(sizes, block_sizes)
+    ]
+    return itertools.product(*range_lists)
 
 def generate_slices(total_size, block_size):
     lo = 0
@@ -138,6 +230,114 @@ def generate_slices(total_size, block_size):
         hi = min(lo + block_size, total_size)
         yield slice(lo, hi)
         lo = hi
+
+def get_automatic_block_size_indexes(equation, args, sizes, auto_block_size,
+        output_dtypes):
+    if not args:
+        return []
+    device = args[0].device
+    dtype = args[0].dtype
+    # Get the number of bytes available in memory.
+    available_bytes = get_available_bytes(device, auto_block_size)
+    # Get the number of bytes per element in the block.
+    bytes_per_element = get_bytes_per_element(dtype)
+    # Figure out the number of tensor elements that will be taken up by the
+    # output tensor. This will be subtracted from the total available memory.
+    output_elements = get_output_elements(equation, args)
+    # Get the number of bytes per element in the output.
+    actual_output_dtypes = (dtype if x is None else x for x in output_dtypes)
+    bytes_per_output_element = sum(map(get_bytes_per_element, actual_output_dtypes))
+    # Count the size of the output tensor twice: once for the final output
+    # tensor, and again for the temporary output tensor that is added to it.
+    output_bytes = 2 * bytes_per_output_element * output_elements
+    # Figure out the total number of tensor elements that can fit in memory.
+    available_elements = (available_bytes - output_bytes) // bytes_per_element
+    block_sizes = get_automatic_block_sizes(sizes, available_elements)
+    return block_sizes_to_indexes(sizes, block_sizes)
+
+def get_available_bytes(device, auto_block_size):
+    if device.type == 'cuda':
+        return get_available_bytes_cuda(device, auto_block_size)
+    elif device.type == 'cpu':
+        return auto_block_size.max_cpu_bytes
+    else:
+        raise ValueError(f'unrecognized device type: {device!r}')
+
+def get_available_bytes_cuda(device, auto_block_size):
+    if auto_block_size.max_cuda_bytes is not None:
+        return auto_block_size.max_cuda_bytes
+    else:
+        if auto_block_size.cache_available_cuda_memory:
+            # Cache the amount of CUDA memory available, since querying this
+            # is very slow.
+            if device.index not in auto_block_size.available_cuda_memory:
+                auto_block_size.available_cuda_memory[device.index] = round(
+                    auto_block_size.cuda_memory_proportion *
+                    get_real_available_cuda_bytes(device))
+            return auto_block_size.available_cuda_memory[device.index]
+        else:
+            return get_real_available_cuda_bytes(device)
+
+def get_real_available_cuda_bytes(device):
+    free_bytes = get_cuda_free_bytes(device)
+    reserved_bytes = get_cuda_memory_reserved(device)
+    allocated_bytes = torch.cuda.memory_allocated(device)
+    return (reserved_bytes - allocated_bytes) + free_bytes
+
+# torch.cuda.memory_cached was renamed to torch.cuda.memory_reserved in
+# PyTorch 1.4.0.
+if hasattr(torch.cuda, 'memory_reserved'):
+    get_cuda_memory_reserved = torch.cuda.memory_reserved
+else:
+    get_cuda_memory_reserved = torch.cuda.memory_cached
+
+# torch.cuda.mem_get_info was introduced in PyTorch 1.11.0.
+if hasattr(torch.cuda, 'mem_get_info'):
+    def get_cuda_free_bytes(device):
+        free_bytes, total_bytes = torch.cuda.mem_get_info(device)
+        return free_bytes
+else:
+    def get_cuda_free_bytes(device):
+        pynvml.nvmlInit()
+        handle = pynvml.nvmlDeviceGetHandleByIndex(device.index)
+        info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+        return info.free
+
+def get_output_elements(equation, args):
+    # Take the product of the sizes of the output dimensions.
+    sizes = equation.get_sizes(args, equation.output_variables)
+    return functools.reduce(lambda a, b: a * b, sizes, 1)
+
+def get_automatic_block_sizes(sizes, available_elements):
+    if available_elements <= 0:
+        raise ValueError('no memory available to create any blocks')
+    # This is a very naive and certainly non-optimal way of finding a set of
+    # block sizes where their product is close to but does not exceed the
+    # number of available elements. It works by sorting dimensions from
+    # smallest to largest and multiplying them together until the product gets
+    # too big.
+    sorted_sizes = sorted(enumerate(sizes), key=lambda x: x[1])
+    block_sizes = [1] * len(sizes)
+    total_size = 1
+    for index, size in sorted_sizes:
+        new_total_size = total_size * size
+        if new_total_size <= available_elements:
+            # If multiplying the next dimension into the total product does
+            # not exceed the limit, multiply it in.
+            block_sizes[index] = size
+            total_size = new_total_size
+        else:
+            # Otherwise, figure out how big we can make the block size for this
+            # dimension without exceeding the total by dividing the number of
+            # available elements by the total size so far before adding this
+            # dimension.
+            new_block_size = available_elements // total_size
+            block_sizes[index] = new_block_size
+            # Since the running product can only increase, there's no reason
+            # to continue for further iterations; they would set all the
+            # remaining block sizes to 1 anyway.
+            break
+    return block_sizes
 
 _COLON = slice(None)
 

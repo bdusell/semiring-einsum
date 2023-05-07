@@ -5,7 +5,12 @@ import typing
 import torch
 import typing_extensions
 
-from .equation import Equation, get_ranges
+from .equation import (
+    Equation,
+    AutomaticBlockSize,
+    AUTOMATIC_BLOCK_SIZE,
+    get_summed_variable_indexes
+)
 from .extend import (
     semiring_einsum_forward_impl,
     reduce_in_place,
@@ -25,7 +30,7 @@ def log_einsum_backward(
         args: typing.Sequence[torch.Tensor],
         needs_grad: typing.Sequence[bool],
         grad: torch.Tensor,
-        block_size: int,
+        block_size: typing.Union[int, AutomaticBlockSize]=AUTOMATIC_BLOCK_SIZE,
         grad_of_neg_inf: typing.Union[float, typing_extensions.Literal['uniform']]=math.nan,
         saved_max: typing.Optional[torch.Tensor]=None,
         saved_sumexpsub: typing.Optional[torch.Tensor]=None
@@ -144,7 +149,6 @@ def log_einsum_backward(
                            for arg, arg_info in zip(args, reduce_info.lookup_info)]
             max_values_viewed = output_lookup_info.view(max_values)
             C_viewed          = output_lookup_info.view(C)
-            var_ranges = reduce_info.get_ranges(equation, args, block_size)
 
             # In this outer loop, we need to sum over all dimensions that
             # appear in the output but not in arg i. This is due to a basic
@@ -164,7 +168,7 @@ def log_einsum_backward(
             # This loop is *not* computing the denominator of the softmax; that
             # was already done above in Z.
             def generate_terms():
-                for var_values in itertools.product(*var_ranges):
+                for var_values in reduce_info.get_summed_variable_indexes(equation, args, block_size):
 
                     # This inner loop adds tensor slices together to get a
                     # term to be used in the outer loop.
