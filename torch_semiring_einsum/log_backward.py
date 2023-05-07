@@ -140,6 +140,10 @@ def log_einsum_backward(
     for i, arg in enumerate(args):
         if needs_grad[i]:
             reduce_info, output_lookup_info = equation.reduce_all_to_input[i]
+            args_viewed = [arg_info.view(arg)
+                           for arg, arg_info in zip(args, reduce_info.lookup_info)]
+            max_values_viewed = output_lookup_info.view(max_values)
+            C_viewed          = output_lookup_info.view(C)
             var_ranges = reduce_info.get_ranges(equation, args, block_size)
 
             # In this outer loop, we need to sum over all dimensions that
@@ -165,8 +169,8 @@ def log_einsum_backward(
                     # This inner loop adds tensor slices together to get a
                     # term to be used in the outer loop.
                     def generate_factors():
-                        for arg, arg_info in zip(args, reduce_info.lookup_info):
-                            yield arg_info.lookup(arg, var_values)
+                        for argv, arg_info in zip(args_viewed, reduce_info.lookup_info):
+                            yield arg_info.view_lookup(argv, var_values)
 
                     term_size = reduce_info.get_term_size(equation, args, var_values)
                     term = reduce_in_place(
@@ -174,7 +178,7 @@ def log_einsum_backward(
                         generate_factors(),
                         lambda x: adjust_size(x, term_size))
                     # Subtract the maximum values to avoid overflow in exp().
-                    term.sub_(output_lookup_info.lookup(max_values, var_values))
+                    term.sub_(output_lookup_info.view_lookup(max_values_viewed, var_values))
                     term.exp_()
                     # TODO An advantage of splitting the outer loop into two
                     # nested loops is that this multiplication could be moved
@@ -184,7 +188,7 @@ def log_einsum_backward(
                     # dimension in the output.
                     # If C is +inf here (because Z was 0), then this will
                     # result in nan, because term will be 0 and 0 * inf is nan.
-                    term.mul_(output_lookup_info.lookup(C, var_values))
+                    term.mul_(output_lookup_info.view_lookup(C_viewed, var_values))
                     yield sum_block(term, reduce_info.reduced_dims)
 
             arg_grad = reduce_in_place(add_in_place, generate_terms())
