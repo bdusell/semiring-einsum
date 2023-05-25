@@ -207,9 +207,12 @@ def get_summed_variable_indexes(equation, args, variables, block_size, output_dt
 
 def get_bits_per_element(dtype):
     try:
-        return torch.finfo(dtype).bits
+        try:
+            return torch.finfo(dtype).bits
+        except TypeError:
+            return torch.iinfo(dtype).bits
     except TypeError:
-        return torch.iinfo(dtype).bits
+        return 8 # torch.bool is supported by neither torch.finfo nor torch.iinfo
 
 def get_bytes_per_element(dtype):
     return get_bits_per_element(dtype) // 8
