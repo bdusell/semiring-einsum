@@ -212,7 +212,11 @@ def get_bits_per_element(dtype):
         except TypeError:
             return torch.iinfo(dtype).bits
     except TypeError:
-        return 8 # torch.bool is supported by neither torch.finfo nor torch.iinfo
+        if dtype == torch.bool:
+            # torch.bool is supported by neither torch.finfo nor torch.iinfo.
+            return 8
+        else:
+            raise TypeError(f'cannot determine number of bits in dtype {dtype}')
 
 def get_bytes_per_element(dtype):
     return get_bits_per_element(dtype) // 8
