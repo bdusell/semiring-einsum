@@ -316,15 +316,15 @@ def get_output_elements(equation, args):
     return functools.reduce(lambda a, b: a * b, sizes, 1)
 
 def get_automatic_block_sizes(sizes, available_elements):
-    if available_elements <= 0:
-        raise ValueError('no memory available to create any blocks')
     # This is a very naive and certainly non-optimal way of finding a set of
     # block sizes where their product is close to but does not exceed the
     # number of available elements. It works by sorting dimensions from
     # smallest to largest and multiplying them together until the product gets
     # too big.
-    sorted_sizes = sorted(enumerate(sizes), key=lambda x: x[1])
     block_sizes = [1] * len(sizes)
+    if available_elements <= 0:
+        return block_sizes # not enough memory
+    sorted_sizes = sorted(enumerate(sizes), key=lambda x: x[1])
     total_size = 1
     for index, size in sorted_sizes:
         new_total_size = total_size * size
