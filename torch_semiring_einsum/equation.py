@@ -5,6 +5,9 @@ import typing
 import pynvml
 import torch
 
+from psutil import Process
+from os import getpid
+
 class Equation:
     r"""An einsum equation that has been pre-compiled into some useful data
     structures."""
@@ -113,7 +116,8 @@ class AutomaticBlockSize:
     When the device is ``cuda``, this automatically calculates the amount of
     free GPU memory on the current device and makes the block size as big as
     possible without exceeding it. When the device is ``cpu``, this uses the
-    value of ``max_cpu_bytes`` to determine how much memory it can use.
+    value of ``max_cpu_bytes`` and subtracts the current process's virtual
+    memory size to determine how much memory the einsum operation can use.
     """
 
     def __init__(self,
@@ -123,8 +127,9 @@ class AutomaticBlockSize:
             cuda_memory_proportion: float=0.8,
             repr_string=None):
         """
-        :param max_cpu_bytes: The maximum amount of memory (in bytes) to use
-            when the device is ``cpu``. By default, this is set to 1 GiB.
+        :param max_cpu_bytes: The maximum amount of memory (in bytes) for the
+            current process to use when the device is ``cpu``. By default, this
+            is set to 1 GiB.
         :param max_cuda_bytes: The maximum amount of memory (in bytes) to use
             when the device is ``cuda``. If ``None``, then the amount of memory
             used will be determined based on the amount of free CUDA memory.
@@ -266,7 +271,7 @@ def get_available_bytes(device, auto_block_size):
     if device.type == 'cuda':
         return get_available_bytes_cuda(device, auto_block_size)
     elif device.type == 'cpu':
-        return auto_block_size.max_cpu_bytes
+        return auto_block_size.max_cpu_bytes - Process(getpid()).memory_info().vms
     else:
         raise ValueError(f'unrecognized device type: {device!r}')
 
