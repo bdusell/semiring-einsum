@@ -88,6 +88,11 @@ Note that unlike in NumPy or PyTorch, equations are pre-compiled using
 :py:func:`~torch_semiring_einsum.compile_equation` rather than re-parsed from
 scratch every time einsum is called.
 
+Derived Functions
+-----------------
+
+For convenience, the module also implements functions `tensordot`, `matmul`, `inner`, `dot`, `mm`, `bmm`, `mv`, and `outer` in terms of einsum. All of these functions take a `block_size` argument and an `einsum` argument, which defaults to `torch_semiring_einsum.einsum` but can be set to other einsum replacements like `log_einsum`, etc.
+
 API Documentation
 -----------------
 
