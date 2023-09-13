@@ -144,6 +144,9 @@ def semiring_einsum_forward_impl(equation, args, block_size, inputs,
         add_in_place, sum_block, multiply_in_place, reduce_info,
         include_indexes, output_dtypes=(None,)):
 
+    inputs_viewed = [arg_info.view(arg)
+                     for arg, arg_info in zip(inputs, reduce_info.lookup_info)]
+
     def generate_terms():
         summed_variable_indexes = reduce_info.get_summed_variable_indexes(
             equation,
@@ -154,11 +157,11 @@ def semiring_einsum_forward_impl(equation, args, block_size, inputs,
             # var_values is a tuple of slices.
 
             def generate_factors():
-                for arg, arg_info in zip(inputs, reduce_info.lookup_info):
+                for argv, arg_info in zip(inputs_viewed, reduce_info.lookup_info):
                     # Get a slice of arg based on the current values of the
                     # reduced variables. The result has a shape of
                     # output_vars x reduced_vars.
-                    yield arg_info.lookup(arg, var_values)
+                    yield arg_info.view_lookup(argv, var_values)
 
             term_size = reduce_info.get_term_size(equation, args, var_values)
             # Multiply the args together.
