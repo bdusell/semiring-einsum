@@ -323,7 +323,10 @@ def get_automatic_block_sizes(sizes, available_elements):
     # too big.
     block_sizes = [1] * len(sizes)
     if available_elements <= 0:
-        return block_sizes # not enough memory
+        # There isn't any memory left according to our estimate. In this case,
+        # just use 1 for all dimensions and hope for the best. Maybe it won't
+        # actually fail.
+        return block_sizes
     sorted_sizes = sorted(enumerate(sizes), key=lambda x: x[1])
     total_size = 1
     for index, size in sorted_sizes:
