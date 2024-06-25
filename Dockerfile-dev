@@ -21,4 +21,7 @@ ENV PATH /usr/local/poetry/bin:${PATH}
 # Stores Python packages in the local directory.
 # See https://python-poetry.org/docs/configuration/#virtualenvsin-project
 ENV POETRY_VIRTUALENVS_IN_PROJECT true
+# Store Poetry configuration in the local directory.
+# See https://python-poetry.org/docs/configuration/
+ENV XDG_CONFIG_HOME /app/.config
 WORKDIR /app/
