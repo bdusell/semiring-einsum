@@ -1,6 +1,4 @@
-set -e
-set -u
-set -o pipefail
+set -euo pipefail
 
 bash scripts/exec.bash bash scripts/build-docs.bash
 git checkout gh-pages

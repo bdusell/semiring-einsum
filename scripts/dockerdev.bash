@@ -45,7 +45,7 @@
 # You should source this file in another bash script like so:
 #
 #     . dockerdev.bash
-# 
+#
 # or
 #
 #     source dockerdev.bash
@@ -64,7 +64,7 @@
 if [[ ! ${_DOCKERDEV_INCLUDED-} ]]; then
 _DOCKERDEV_INCLUDED=1
 
-DOCKERDEV_VERSION='0.5.1'
+DOCKERDEV_VERSION='0.5.2'
 
 # dockerdev_container_info <container-name>
 #   Get the image name and status of a container.
@@ -99,12 +99,12 @@ _dockerdev_add_user() {
   # On Mac, the group name might not be valid in Linux, so we normalize it.
   groupname=$(id -gn "$USER" | tr '[A-Z]' '[a-z]' | sed 's/[^-a-z0-9_.@]/-/g') &&
   echo "
-    if addgroup --help 2>&1 | grep -i busybox > /dev/null; then
-      addgroup -g $groupid '$groupname' && \
-      adduser -u $userid -G '$groupname' -D -g '' '$USER'
-    elif addgroup --version 2>&1 | grep -F debian.org > /dev/null; then
-      addgroup --gid $groupid '$groupname' && \
-      adduser --uid $userid --gid $groupid --disabled-password --gecos '' '$USER'
+    if addgroup --help 2>&1 | head -1 | grep -i busybox > /dev/null; then
+      addgroup -g $groupid $(printf %q "$groupname") && \
+      adduser -u $userid -G $(printf %q "$groupname") -D -g '' $(printf %q "$USER")
+    elif addgroup --help 2>&1 | grep -F -- '--gid ID' > /dev/null; then
+      addgroup --gid $groupid $(printf %q "$groupname") && \
+      adduser --uid $userid --gid $groupid --disabled-password --gecos '' $(printf %q "$USER")
     else
       echo 'error: Could not figure out how to add a new user.'
       false
@@ -136,6 +136,8 @@ dockerdev_start_new_dev_container() {
         elif [[ ! $image_name ]]; then
           image_name=$1
         else
+          echo "error: unrecognized argument to dockerdev_start_new_dev_container: $1" 1>&2 &&
+          echo "       Did you forget to use -- with dockerdev_ensure_dev_container_started?" 1>&2 &&
           return 1
         fi
         ;;

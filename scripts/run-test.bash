@@ -1,4 +1,3 @@
-set -e
-set -u
+set -euo pipefail
 
 PYTHONPATH=$PWD:${PYTHONPATH-} python "$@"

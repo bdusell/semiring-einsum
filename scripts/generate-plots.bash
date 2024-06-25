@@ -1,5 +1,4 @@
-set -e
-set -u
+set -euo pipefail
 
 bash scripts/run-test.bash tests/plot_cost.py \
   --type time \

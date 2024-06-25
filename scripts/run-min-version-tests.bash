@@ -1,6 +1,4 @@
-set -e
-set -u
-set -o pipefail
+set -euo pipefail
 
 . scripts/dockerdev.bash
 . scripts/variables.bash
