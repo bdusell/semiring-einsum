@@ -24,6 +24,7 @@ typing-extensions = "^4.0.0"
 [tool.poetry.dev-dependencies]
 sphinx = "^5.1.1"
 sphinxcontrib-bibtex = "^2.5.0"
+setuptools = { version = "^70.1.1", python = ">=3.8" }
 sphinx-autodoc-typehints = { version = "^1.19.2", python = ">=3.7" }
 numpy = { version = "^1.23", python = ">=3.8" }
 matplotlib = { version = "^3.5", python = ">=3.7" }
