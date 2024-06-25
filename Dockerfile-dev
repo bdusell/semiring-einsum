@@ -1,43 +1,22 @@
-FROM nvidia/cuda:11.7.1-cudnn8-devel-ubuntu22.04
+FROM python:3.11.9-bookworm
 # UTF-8 encoding is necessary for printing non-ASCII characters to the
 # terminal.
 ENV LC_ALL C.UTF-8
-# Install Python.
-# Note that PyTorch does not yet support Python later than 3.9.
-RUN apt-get update -y && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        # Installs add-apt-repository.
-        software-properties-common \
-        && \
-    add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get update -y && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        python3.9 \
-        python3.9-dev \
-        # Required by Poetry
-        python3.9-venv \
-        # Required by numpy
-        python3.9-distutils \
-        && \
-    rm -rf /var/lib/apt/lists/*
-# Poetry won't get installed correctly unless a `python` binary is present.
-# The specific Python installation it points to also needs to have the venv
-# module installed. The version of Python used to run the installation script
-# should also match.
-RUN ln -s "`which python3.9`" /usr/local/bin/python && \
-    ln -sf "`which python3.9`" /usr/local/bin/python3
 # Install Poetry.
 # See https://python-poetry.org/docs/#installing-with-the-official-installer
-RUN apt-get update -y && \
+RUN POETRY_VERSION=1.8.3 && \
+    apt-get update -y && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         curl \
         && \
-    rm -rf /var/lib/apt/lists/* && \
     cd /tmp && \
     curl -sSL https://install.python-poetry.org > install-poetry.py && \
-    POETRY_HOME=/usr/local/poetry python3 install-poetry.py && \
+    POETRY_HOME=/usr/local/poetry python3 install-poetry.py --version $POETRY_VERSION && \
     rm install-poetry.py && \
-    apt-get purge -y curl
+    apt-get purge -y \
+        curl \
+        && \
+    rm -rf /var/lib/apt/lists/*
 ENV PATH /usr/local/poetry/bin:${PATH}
 # Stores Python packages in the local directory.
 # See https://python-poetry.org/docs/configuration/#virtualenvsin-project

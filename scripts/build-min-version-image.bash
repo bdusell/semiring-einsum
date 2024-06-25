@@ -1,12 +1,11 @@
-set -e
-set -u
-set -o pipefail
+set -euo pipefail
 
 . scripts/variables.bash
 
 get_min_version() {
   local name=$1
-  grep -m 1 "$name = " pyproject.toml | sed 's/.*"^\(.*\)"/\1/'
+  grep -m 1 "$name = " pyproject.toml \
+    | python -c 'import re; print(re.match(""".* = "(?:\\^|>=)(.*?)[,"]""", input()).group(1))'
 }
 
 min_python_version=$(get_min_version python)
