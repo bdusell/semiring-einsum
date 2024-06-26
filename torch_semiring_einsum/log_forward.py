@@ -21,7 +21,7 @@ def log_einsum_forward(
         block_size: typing.Union[int, AutomaticBlockSize]=AUTOMATIC_BLOCK_SIZE,
         return_max: bool=False,
         return_sumexpsub: bool=False
-    ) -> typing.Union[torch.Tensor, typing.Tuple[torch.Tensor]]:
+    ) -> typing.Union[torch.Tensor, typing.Tuple[torch.Tensor, ...]]:
     r"""Log-space einsum, where addition :math:`a + b` is replaced with
     :math:`\log(\exp a + \exp b)`, and multiplication :math:`a \times b` is
     replaced with addition :math:`a + b`.
