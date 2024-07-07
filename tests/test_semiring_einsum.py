@@ -325,8 +325,8 @@ class TestSemiringEinsum(unittest.TestCase):
         expected_output[6] = math.inf
         for grad in expected_grads:
             grad[6] = 0.0
-            # This is like inf/inf, which is nan. torch.logsumexp treats sets
-            # the gradient to nan here.
+            # This is like inf/inf, which is nan. torch.logsumexp sets the
+            # gradient to nan here.
             grad[6, 5] = math.nan
 
         args = [torch.nn.Parameter(arg) for arg in args]
