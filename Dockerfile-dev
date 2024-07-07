@@ -1,7 +1,7 @@
 FROM python:3.11.9-bookworm
 # UTF-8 encoding is necessary for printing non-ASCII characters to the
 # terminal.
-ENV LC_ALL C.UTF-8
+ENV LC_ALL=C.UTF-8
 # Install Poetry.
 # See https://python-poetry.org/docs/#installing-with-the-official-installer
 RUN POETRY_VERSION=1.8.3 && \
@@ -17,11 +17,11 @@ RUN POETRY_VERSION=1.8.3 && \
         curl \
         && \
     rm -rf /var/lib/apt/lists/*
-ENV PATH /usr/local/poetry/bin:${PATH}
+ENV PATH=/usr/local/poetry/bin:${PATH}
 # Stores Python packages in the local directory.
 # See https://python-poetry.org/docs/configuration/#virtualenvsin-project
-ENV POETRY_VIRTUALENVS_IN_PROJECT true
+ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 # Store Poetry configuration in the local directory.
 # See https://python-poetry.org/docs/configuration/
-ENV XDG_CONFIG_HOME /app/.config
+ENV XDG_CONFIG_HOME=/app/.config
 WORKDIR /app/
