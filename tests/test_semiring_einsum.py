@@ -14,6 +14,7 @@ from torch_semiring_einsum import (
     log_einsum,
     log_viterbi_einsum_forward,
     boolean_einsum_forward,
+    min_tropical_einsum_forward,
     AutomaticBlockSize)
 
 EQUATION_STR = 'abce,abde,abdf->acd'
@@ -512,6 +513,31 @@ class TestSemiringEinsum(unittest.TestCase):
             block_size=3)
         self.assertEqual(result.size(), OUTPUT_SIZE)
         self.assertEqual(result.tolist(), expected_result.tolist())
+
+    def test_min_tropical_einsum_forward(self):
+        args = []
+        for size in SIZES:
+            arg = torch.rand(size, device=self.device, generator=self.generator)
+            # Set some elements to +inf. Use 0.2 to make sure there are enough
+            # infs to cause infs in the output.
+            mask = torch.rand(size, device=self.device, generator=self.generator) >= 0.2
+            arg[mask] = math.inf
+            args.append(arg)
+        expected_result = reference_semiring_einsum(
+            *args,
+            dtype=args[0].dtype,
+            add=lambda a, b: min(a, b),
+            multiply=lambda a, b: a + b,
+            zero=math.inf,
+            device=self.device
+        )
+        self.assertEqual(expected_result.size(), OUTPUT_SIZE)
+        result = min_tropical_einsum_forward(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=3)
+        self.assertEqual(result.size(), OUTPUT_SIZE)
+        numpy.testing.assert_allclose(result, expected_result)
 
 def reference_log_viterbi_einsum(X1, X2, X3, device):
     Y_max = []

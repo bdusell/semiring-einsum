@@ -12,6 +12,9 @@ def max_in_place(a, b):
     # `torch.max` has been available since PyTorch 0.1.12.
     torch.max(a, b, out=a)
 
+def min_in_place(a, b):
+    torch.min(a, b, out=a)
+
 def sum_block(a, dims):
     if dims:
         # `dim` was first allowed to be a tuple in PyTorch 0.4.1.
@@ -40,6 +43,20 @@ else:
         result = a
         for dim in reversed(dims):
             result = torch.max(result, dim=dim)[0]
+        return result
+
+# Define the min_block function, similarly to above.
+if hasattr(torch, 'amin'):
+    def min_block(a, dims):
+        if dims:
+            return torch.amin(a, dim=dims)
+        else:
+            return a
+else:
+    def min_block(a, dims):
+        result = a
+        for dim in reversed(dims):
+            result = torch.min(result, dim=dim)[0]
         return result
 
 # Define the clip_inf_in_place function differently depending on the version

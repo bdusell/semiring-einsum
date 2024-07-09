@@ -16,6 +16,7 @@ from .log_backward import log_einsum_backward
 from .log_differentiable import log_einsum
 from .log_viterbi_forward import log_viterbi_einsum_forward
 from .boolean_forward import boolean_einsum_forward
+from .min_tropical_forward import min_tropical_einsum_forward
 
 # Note that module variables need to be documented in this file, or else
 # Sphinx won't pick them up.
@@ -37,6 +38,7 @@ __all__ = [
     'log_einsum_backward',
     'log_viterbi_einsum_forward',
     'boolean_einsum_forward',
+    'min_tropical_einsum_forward',
     'AUTOMATIC_BLOCK_SIZE',
     'AutomaticBlockSize',
     'semiring_einsum_forward',
