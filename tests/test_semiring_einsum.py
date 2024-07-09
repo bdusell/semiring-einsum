@@ -13,6 +13,7 @@ from torch_semiring_einsum import (
     log_einsum_backward,
     log_einsum,
     log_viterbi_einsum_forward,
+    boolean_einsum_forward,
     AutomaticBlockSize)
 
 EQUATION_STR = 'abce,abde,abdf->acd'
@@ -488,6 +489,30 @@ class TestSemiringEinsum(unittest.TestCase):
                 self.assertEqual(result.size(), OUTPUT_SIZE)
                 numpy.testing.assert_allclose(result, expected_result, rtol=1e-6)
 
+    def test_boolean_einsum_forward(self):
+        args = [
+            # Using 0.9 makes sure there aren't too many Trues, so that some
+            # results are False.
+            torch.rand(size, device=self.device, generator=self.generator) >= 0.9
+            for size in SIZES
+        ]
+        expected_result = reference_semiring_einsum(
+            *args,
+            # PyTorch 1.1.0 uses torch.uint8 instead of torch.bool.
+            dtype=args[0].dtype,
+            add=lambda a, b: a or b,
+            multiply=lambda a, b: a and b,
+            zero=False,
+            device=self.device
+        )
+        self.assertEqual(expected_result.size(), OUTPUT_SIZE)
+        result = boolean_einsum_forward(
+            compile_equation(EQUATION_STR),
+            *args,
+            block_size=3)
+        self.assertEqual(result.size(), OUTPUT_SIZE)
+        self.assertEqual(result.tolist(), expected_result.tolist())
+
 def reference_log_viterbi_einsum(X1, X2, X3, device):
     Y_max = []
     Y_argmax = []
@@ -524,6 +549,20 @@ def recursively_stack(tensors):
         return tensors
     else:
         return torch.stack([recursively_stack(x) for x in tensors])
+
+def reference_semiring_einsum(X1, X2, X3, dtype, add, multiply, zero, device):
+    Y = torch.full((A, C, D), zero, dtype=dtype, device=device)
+    for a in range(A):
+        for c in range(C):
+            for d in range(D):
+                for b in range(B):
+                    for e in range(E):
+                        for f in range(F):
+                            Y[a, c, d] = add(
+                                Y[a, c, d],
+                                multiply(multiply(X1[a, b, c, e].item(), X2[a, b, d, e].item()), X3[a, b, d, f].item())
+                            )
+    return Y
 
 if __name__ == '__main__':
     unittest.main()
