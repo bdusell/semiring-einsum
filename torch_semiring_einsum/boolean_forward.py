@@ -15,6 +15,9 @@ def boolean_einsum_forward(
     or (:math:`a \vee b`) and multiplication (:math:`a \times b`) is replaced
     with logical and (:math:`a \wedge b`).
 
+    Note that prior to PyTorch 1.2.0, the dtype :py:data:`torch.uint8` is used
+    for Boolean tensors instead of :py:data:`torch.bool`.
+
     :param equation: A pre-compiled equation.
     :param args: Input tensors. The number of input tensors must be compatible
         with ``equation``.

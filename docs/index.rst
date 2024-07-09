@@ -9,12 +9,12 @@ re-implementation of
 `einsum <https://pytorch.org/docs/master/generated/torch.einsum.html>`_
 that supports multiple
 `semirings <https://en.wikipedia.org/wiki/Semiring>`_.
-It includes implementations for the real, log, and Viterbi semirings out of
-the box and can be extended to support additional semirings. It can also offer
-better performance than the built-in :py:func:`torch.einsum` function and
-makes the memory-execution time tradeoff configurable, allowing you to run
-large einsum operations that might otherwise be impossible given typical
-hardware constraints.
+It includes implementations for several semirings out of the box (real, log,
+Viterbi, Boolean, tropical) and can be extended to support additional
+semirings. It can also offer better performance than the built-in
+:py:func:`torch.einsum` function and makes the memory-execution time
+tradeoff configurable, allowing you to run large einsum operations that might
+otherwise be impossible given typical hardware constraints.
 
 This einsum implementation was specifically designed to be memory-efficient,
 particularly on einsum operations over more than two inputs. Whereas a
