@@ -53,8 +53,6 @@
 # You will mainly be interested in these functions:
 # * dockerdev_ensure_dev_container_started
 #     Ensures that a dev container is started with a certain image.
-# * dockerdev_ensure_dev_container_started_callback
-#     As above but accepts a callback function.
 # * dockerdev_run_in_dev_container
 #     Runs a command in a dev container.
 # * dockerdev_run_in_dev_stack_container
@@ -64,7 +62,7 @@
 if [[ ! ${_DOCKERDEV_INCLUDED-} ]]; then
 _DOCKERDEV_INCLUDED=1
 
-DOCKERDEV_VERSION='0.5.2'
+DOCKERDEV_VERSION='0.5.3'
 
 # dockerdev_container_info <container-name>
 #   Get the image name and status of a container.
@@ -250,7 +248,8 @@ dockerdev_ensure_container_started() {
 #   use to create a container for your development environment.
 #   Optionally accepts the name of a command to be called just after the
 #   container is started (--on-start). It will not be called if the container
-#   is already running.
+#   is already running. The command will receive one argument: the name of the
+#   container.
 #   If --x11 is used, then the X server of the host will be made accessible to
 #   the container so that GUI programs can be used.
 dockerdev_ensure_dev_container_started() {
