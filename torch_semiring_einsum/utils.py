@@ -78,36 +78,29 @@ else:
         max_float = a.new_tensor(finfo.max)
         torch.min(a, max_float, out=a)
 
-# Define the Boolean semiring functions differently depending on the version of
-# PyTorch.
+# Note that `.logical_or_()` and `.logical_and_()` were introduced in PyTorch
+# 1.5.0. The operator equivalents have always worked.
 
-if hasattr(torch.Tensor, 'logical_or_'):
+def logical_or_in_place(a, b):
+    a |= b
 
-    # `.logical_or_()` and `.logical_and_()` were introduced in PyTorch 1.5.0.
-    def logical_or_in_place(a, b):
-        a.logical_or_(b)
+def logical_and_in_place(a, b):
+    a &= b
 
-    def logical_and_in_place(a, b):
-        a.logical_and_(b)
-
+# Although not publicly documented, `torch.any` has existed since PyTorch
+# 1.1.0. It was first documented in PyTorch 1.8.0.
+try:
+    # `torch.any` accepts a tuple as `dim` since PyTorch 2.2.0.
+    torch.any(torch.tensor([0.1, 0.9]) > 0.5, dim=(0,))
+except TypeError:
+    def logical_or_block(a, dims):
+        # Fall back to reducing each dimension one at a time using `any`.
+        result = a
+        for dim in reversed(dims):
+            result = torch.any(result, dim=dim)
+        return result
 else:
-
-    def logical_or_in_place(a, b):
-        a |= b
-
-    def logical_and_in_place(a, b):
-        a &= b
-
-if hasattr(torch, 'amax'):
-    # For bool tensors, `amax()` does the same thing as logical or.
-    logical_or_block = max_block
-else:
-    # Note that PyTorch <1.2.0 uses the dtype uint8 instead of bool.
-    _bool_dtype = (torch.tensor(1, device='cpu') < torch.tensor(2, device='cpu')).dtype
-    if _bool_dtype == torch.bool:
-        def logical_or_block(a, dims):
-            return sum_block(a, dims)
-    else:
-        def logical_or_block(a, dims):
-            # Using > 0 clamps values to 1.
-            return sum_block(a, dims) > 0
+    # Note that unlike `torch.sum`, `torch.any` correctly does not reduce any
+    # dimensions when dim is `()`.
+    def logical_or_block(a, dims):
+        return torch.any(a, dim=dims)
