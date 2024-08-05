@@ -360,13 +360,32 @@ class LookupInfo:
         self.num_extra_vars = num_extra_vars
         self.permutation = permutation
 
+        n = max((1 + source_index for source_index, dest_index in index_map),
+                default=0)
+        self.source_to_dest = [None] * n
+        for source_index, dest_index in index_map:
+            self.source_to_dest[source_index] = dest_index
+
     def lookup(self, arg, var_values):
         index = [_COLON] * arg.dim()
         for source_index, dest_index in self.index_map:
+            assert(dest_index == self.permutation[arg.ndim + self.num_extra_vars - len(var_values) + source_index])
             index[dest_index] = var_values[source_index]
         for i in range(self.num_extra_vars):
             index.append(None)
         return arg[tuple(index)].permute(self.permutation)
+
+    def view(self, arg):
+        for i in range(self.num_extra_vars):
+            arg = arg.unsqueeze(-1)
+        return arg.permute(self.permutation)
+
+    def view_lookup(self, argv, var_values):
+        # TODO: generate this code in __init__ using ast
+        return argv[tuple(itertools.chain(
+            (Ellipsis,),
+            (_COLON if dest_index is None else var_value
+             for dest_index, var_value in itertools.zip_longest(self.source_to_dest, var_values))))]
 
 def create_reduce_info(input_vars, output_vars):
     r"""Pre-compile a data structure that will help reduce the variables
