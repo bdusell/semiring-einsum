@@ -65,15 +65,47 @@ class Equation:
                 output_lookup_info = reduce_info.lookup_info.pop()
                 self.reduce_all_to_input.append((reduce_info, output_lookup_info))
 
-def compile_equation(equation: str) -> Equation:
+def compile_equation(equation: typing.Optional[str]=None, *,
+        inputs: typing.Optional[typing.Sequence[typing.Sequence[typing.Any]]]=None,
+        output: typing.Optional[typing.Sequence[typing.Any]]=None
+    ) -> Equation:
     r"""Pre-compile an einsum equation for use with the einsum functions in
     this package.
 
+    The equation to compile can be passed either as a string through the
+    parameter ``equation`` or as lists of objects through the parameters
+    ``inputs`` and ``output``.
+
+    The string syntax follows that of :py:func:`torch.einsum` and
+    :py:func:`numpy.einsum`, e.g., ``'ik,kj->ij'``. However, ellipses (``...``)
+    are not supported. Any single character, not just the letters a-z, can be
+    used as variables. In this way, one can use more than 26 variables. Note
+    that PyTorch has a limit of 64 tensor dimensions.
+
+    The alternative is to pass the variables as lists of objects through
+    ``inputs`` and ``output``. Here, the variables can be any hashable object,
+    e.g., :py:class:`int`, not just single characters. This provides another
+    easy way to use more than 26 variables, especially if the equation is
+    generated programmatically.
+
     :param equation: An equation in einsum syntax.
+    :param inputs: A list of variable lists, where a variable list is a list
+        of hashable objects. The :math:`i`\ th variable list specifies the
+        variables of the :math:`i`\ th input tensor.
+    :param output: A variable list specifying the variables of the output
+        tensor.
     :return: A pre-compiled equation.
     """
-    args_str, output_vars = equation.split('->', 1)
-    arg_strs = args_str.split(',')
+    if equation is not None:
+        if inputs is not None or output is not None:
+            raise ValueError('cannot pass both equation and inputs/output to compile_equation()')
+        args_str, output_vars = equation.split('->', 1)
+        arg_strs = args_str.split(',')
+    else:
+        if inputs is None or output is None:
+            raise ValueError('must pass equation or both inputs and output to compile_equation()')
+        output_vars = output
+        arg_strs = inputs
     char_to_int = {}
     int_to_arg_dims = []
     args_dims = []

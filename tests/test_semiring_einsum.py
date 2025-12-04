@@ -30,6 +30,20 @@ class TestCompileEquation(unittest.TestCase):
         equation.prepare_for_forward()
         equation.prepare_for_backward()
 
+    def test_bad_call(self):
+        with self.assertRaises(ValueError):
+            compile_equation()
+        with self.assertRaises(ValueError):
+            compile_equation(EQUATION_STR, inputs=[[1, 2, 3], [3, 2]], output=[2, 1])
+        with self.assertRaises(ValueError):
+            compile_equation(EQUATION_STR, inputs=[[1, 2, 3], [3, 2]])
+        with self.assertRaises(ValueError):
+            compile_equation(EQUATION_STR, output=[2, 1])
+        with self.assertRaises(ValueError):
+            compile_equation(inputs=[[1, 2, 3], [3, 2]])
+        with self.assertRaises(ValueError):
+            compile_equation(output=[2, 1])
+
 class TestSemiringEinsum(unittest.TestCase):
 
     def setUp(self):
